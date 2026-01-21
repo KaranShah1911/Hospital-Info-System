@@ -1,0 +1,640 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// 1. ENUMS (Strict Typing)
+// ==========================================
+
+enum UserRole {
+  Admin
+  Doctor
+  Nurse
+  Receptionist
+  Pharmacist
+  LabTech
+}
+
+enum DepartmentType {
+  Clinical
+  Non_Clinical
+  Diagnostic
+}
+
+enum ServiceCategory {
+  Radiology
+  Lab
+  Procedure
+  Nursing
+}
+
+enum BedStatus {
+  Available
+  Occupied
+  Cleaning
+  Maintenance
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum AppointmentStatus {
+  Scheduled
+  CheckedIn
+  Completed
+  Cancelled
+}
+
+enum AppointmentType {
+  New
+  FollowUp
+}
+
+enum VisitType {
+  OPD
+  Emergency
+  IPD_Checkin
+}
+
+enum TriageColor {
+  Red
+  Yellow
+  Green
+  Black
+}
+
+enum VisitStatus {
+  Waiting
+  Triaged
+  InConsultation
+  Completed
+  Admitted
+}
+
+enum AdmissionType {
+  Planned
+  Emergency
+  Transfer
+}
+
+enum AdmissionStatus {
+  Admitted
+  Discharged
+  TransferOut
+}
+
+enum DischargeType {
+  Normal
+  LAMA
+  Death
+  Referred
+}
+
+enum SurgeryStatus {
+  Scheduled
+  InProgress
+  Completed
+}
+
+enum ChecklistStage {
+  Sign_In
+  Time_Out
+  Sign_Out
+}
+
+enum NoteType {
+  SOAP
+  ProgressNote
+  DischargeSummary
+  PreOp
+}
+
+enum OrderType {
+  Lab
+  Radiology
+  Procedure
+}
+
+enum OrderPriority {
+  Routine
+  Stat
+}
+
+enum OrderStatus {
+  Ordered
+  SampleCollected
+  ResultAvailable
+  Completed
+}
+
+enum InvoiceStatus {
+  Draft
+  Finalized
+  Paid
+}
+
+enum ClaimStatus {
+  Submitted
+  QueryRaised
+  Approved
+  Rejected
+}
+
+// ==========================================
+// 2. AUTH & STAFF
+// ==========================================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  staffProfile StaffProfile?
+  labResults   LabResult[]   @relation("ResultTechnician") // If LabTech
+}
+
+model StaffProfile {
+  id                 String  @id @default(uuid())
+  userId             String  @unique
+  departmentId       String?
+  fullName           String
+  qualification      String?
+  registrationNumber String? // Medical Council ID
+  contactNumber      String?
+  shiftTiming        String?
+
+  // Relations
+  user       User        @relation(fields: [userId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  // "Doctor" Relationships
+  headOfDepartments Department[]   @relation("HeadDoctor")
+  appointments      Appointment[]
+  opdVisits         OpdVisit[]
+  admissions        Admission[]    @relation("AdmittingDoctor")
+  surgeries         Surgery[]      @relation("Surgeon")
+  clinicalNotes     ClinicalNote[]
+  serviceOrders     ServiceOrder[]
+  verifiedResults   LabResult[]    @relation("ResultVerifier")
+  prescriptions     Prescription[]
+}
+
+// ==========================================
+// 3. MASTER DATA
+// ==========================================
+
+model Department {
+  id           String         @id @default(uuid())
+  name         String
+  code         String         @unique
+  headDoctorId String?
+  type         DepartmentType
+
+  // Relations
+  headDoctor   StaffProfile?  @relation("HeadDoctor", fields: [headDoctorId], references: [id])
+  staff        StaffProfile[]
+  services     Service[]
+  wards        Ward[]
+  appointments Appointment[]
+  admissions   Admission[]
+}
+
+model Service {
+  id           String          @id @default(uuid())
+  name         String
+  category     ServiceCategory
+  departmentId String
+  basePrice    Decimal         @db.Decimal(10, 2)
+  code         String? // CPT/HCPCS Code
+  isActive     Boolean         @default(true)
+
+  // Relations
+  department    Department     @relation(fields: [departmentId], references: [id])
+  serviceOrders ServiceOrder[]
+  invoiceItems  InvoiceItem[]
+}
+
+model Ward {
+  id              String  @id @default(uuid())
+  name            String
+  departmentId    String
+  floorNumber     Int
+  type            String
+  basePricePerDay Decimal @db.Decimal(10, 2)
+
+  // Relations
+  department Department @relation(fields: [departmentId], references: [id])
+  beds       Bed[]
+}
+
+model Bed {
+  id        String    @id @default(uuid())
+  wardId    String
+  bedNumber String
+  status    BedStatus
+
+  // Relations
+  ward      Ward          @relation(fields: [wardId], references: [id])
+  transfers BedTransfer[]
+}
+
+// ==========================================
+// 4. PATIENT CORE
+// ==========================================
+
+model Patient {
+  id                    String   @id @default(uuid())
+  uhid                  String   @unique // Indexed automatically by @unique
+  firstName             String
+  lastName              String
+  dob                   DateTime @db.Date
+  gender                String
+  bloodGroup            String?
+  phone                 String
+  email                 String?
+  address               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  registrationDate      DateTime @default(now())
+
+  // Relations
+  medicalHistory MedicalHistory[]
+  documents      PatientDocument[]
+  appointments   Appointment[]
+  opdVisits      OpdVisit[]
+  admissions     Admission[]
+  clinicalNotes  ClinicalNote[]
+  serviceOrders  ServiceOrder[]
+  prescriptions  Prescription[]
+  pharmacySales  PharmacySale[]
+  invoices       Invoice[]
+}
+
+// ==========================================
+// 5. MEDICAL HISTORY & DOCS
+// ==========================================
+
+model MedicalHistory {
+  id            String    @id @default(uuid())
+  patientId     String
+  category      String // Allergy, ChronicCondition, etc.
+  name          String
+  severity      String?
+  status        String? // Active, Resolved
+  diagnosedDate DateTime? @db.Date
+  notes         String?
+
+  // Relations
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model PatientDocument {
+  id          String   @id @default(uuid())
+  patientId   String
+  visitId     String?
+  admissionId String?
+  category    String // LabReport, Radiology, ConsentForm
+  fileUrl     String
+  uploadedBy  String?
+  uploadedAt  DateTime @default(now())
+
+  // Relations
+  patient   Patient    @relation(fields: [patientId], references: [id])
+  visit     OpdVisit?  @relation(fields: [visitId], references: [id])
+  admission Admission? @relation(fields: [admissionId], references: [id])
+}
+
+// ==========================================
+// 6. OPD FLOW
+// ==========================================
+
+model Appointment {
+  id              String            @id @default(uuid())
+  patientId       String
+  doctorId        String
+  departmentId    String
+  appointmentDate DateTime
+  tokenNumber     Int
+  status          AppointmentStatus
+  type            AppointmentType
+
+  // Relations
+  patient    Patient      @relation(fields: [patientId], references: [id])
+  doctor     StaffProfile @relation(fields: [doctorId], references: [id])
+  department Department   @relation(fields: [departmentId], references: [id])
+  opdVisit   OpdVisit? // 1:1 Relation
+}
+
+model OpdVisit {
+  id            String   @id @default(uuid())
+  appointmentId String?  @unique // Nullable for Emergency
+  patientId     String
+  doctorId      String
+  visitDate     DateTime @default(now())
+
+  visitType     VisitType
+  triageColor   TriageColor?
+  status        VisitStatus
+  isMedicoLegal Boolean      @default(false)
+
+  // Relations
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      StaffProfile @relation(fields: [doctorId], references: [id])
+
+  clinicalNotes ClinicalNote[]
+  serviceOrders ServiceOrder[]
+  prescriptions Prescription[]
+  documents     PatientDocument[]
+  invoices      Invoice[]
+}
+
+// ==========================================
+// 7. IPD FLOW & BED MGMT
+// ==========================================
+
+model Admission {
+  id                 String    @id @default(uuid())
+  patientId          String
+  admittingDoctorId  String
+  departmentId       String
+  admissionDate      DateTime  @default(now())
+  dischargeDate      DateTime?
+  reasonForAdmission String?
+
+  admissionType AdmissionType
+  status        AdmissionStatus
+  dischargeType DischargeType?
+  mlc           Boolean         @default(false)
+
+  // Relations
+  patient         Patient      @relation(fields: [patientId], references: [id])
+  admittingDoctor StaffProfile @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
+  department      Department   @relation(fields: [departmentId], references: [id])
+
+  bedTransfers    BedTransfer[]
+  surgeries       Surgery[]
+  clinicalNotes   ClinicalNote[]
+  serviceOrders   ServiceOrder[]
+  prescriptions   Prescription[]
+  documents       PatientDocument[]
+  invoices        Invoice[]
+  insuranceClaims InsuranceClaim[]
+}
+
+model BedTransfer {
+  id          String    @id @default(uuid())
+  admissionId String
+  bedId       String
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  reason      String?
+
+  // Relations
+  admission Admission @relation(fields: [admissionId], references: [id])
+  bed       Bed       @relation(fields: [bedId], references: [id])
+}
+
+model Surgery {
+  id            String        @id @default(uuid())
+  admissionId   String
+  procedureName String
+  surgeonId     String
+  otRoomNumber  String?
+  surgeryDate   DateTime
+  status        SurgeryStatus
+  notes         String?
+
+  // Relations
+  admission  Admission           @relation(fields: [admissionId], references: [id])
+  surgeon    StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
+  checklists SurgicalChecklist[]
+}
+
+model SurgicalChecklist {
+  id        String         @id @default(uuid())
+  surgeryId String
+  stage     ChecklistStage
+  itemName  String
+  isChecked Boolean        @default(false)
+  checkedBy String? // Could link to User/Staff
+  timestamp DateTime       @default(now())
+
+  // Relations
+  surgery Surgery @relation(fields: [surgeryId], references: [id])
+}
+
+// ==========================================
+// 8. CLINICAL WORKFLOW (EMR & CPOE)
+// ==========================================
+
+model ClinicalNote {
+  id          String   @id @default(uuid())
+  patientId   String
+  visitId     String?
+  admissionId String?
+  doctorId    String
+  noteType    NoteType
+
+  // Structured Content (SOAP)
+  content Json
+
+  createdAt   DateTime @default(now())
+  isFinalized Boolean  @default(false)
+
+  // Relations
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+}
+
+model ServiceOrder {
+  id          String  @id @default(uuid())
+  patientId   String
+  doctorId    String
+  visitId     String?
+  admissionId String?
+  serviceId   String
+
+  orderType          OrderType
+  priority           OrderPriority
+  clinicalIndication String?
+
+  status    OrderStatus
+  orderDate DateTime    @default(now())
+
+  // Relations
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+  service   Service      @relation(fields: [serviceId], references: [id])
+
+  labResults   LabResult[]
+  invoiceItems InvoiceItem[] // Links order to billing
+}
+
+// ==========================================
+// 9. DIAGNOSTICS
+// ==========================================
+
+model LabResult {
+  id                 String   @id @default(uuid())
+  serviceOrderId     String
+  testName           String
+  resultValue        String
+  referenceRange     String?
+  unit               String?
+  technicianId       String?
+  verifiedByDoctorId String?
+  resultDate         DateTime @default(now())
+
+  // Relations
+  serviceOrder ServiceOrder  @relation(fields: [serviceOrderId], references: [id])
+  technician   User?         @relation("ResultTechnician", fields: [technicianId], references: [id])
+  verifiedBy   StaffProfile? @relation("ResultVerifier", fields: [verifiedByDoctorId], references: [id])
+}
+
+// ==========================================
+// 10. PHARMACY
+// ==========================================
+
+model Prescription {
+  id          String   @id @default(uuid())
+  patientId   String
+  doctorId    String
+  visitId     String?
+  admissionId String?
+  date        DateTime @default(now())
+
+  // Relations
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+
+  items PrescriptionItem[]
+  sales PharmacySale[]
+}
+
+model PrescriptionItem {
+  id             String  @id @default(uuid())
+  prescriptionId String
+  medicineId     String
+  dosage         String
+  frequency      String
+  duration       String
+  instruction    String?
+
+  // Relations
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
+}
+
+model Medicine {
+  id            String   @id @default(uuid())
+  name          String
+  genericName   String
+  batchNumber   String
+  expiryDate    DateTime @db.Date
+  stockQuantity Int
+  reorderLevel  Int
+  unitPrice     Decimal  @db.Decimal(10, 2)
+
+  // Relations
+  prescriptionItems PrescriptionItem[]
+  saleItems         SaleItem[]
+}
+
+model PharmacySale {
+  id             String   @id @default(uuid())
+  patientId      String
+  prescriptionId String?
+  saleDate       DateTime @default(now())
+  totalAmount    Decimal  @db.Decimal(10, 2)
+
+  // Relations
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  prescription Prescription? @relation(fields: [prescriptionId], references: [id])
+  items        SaleItem[]
+}
+
+model SaleItem {
+  id             String  @id @default(uuid())
+  pharmacySaleId String
+  medicineId     String
+  quantity       Int
+  unitPrice      Decimal @db.Decimal(10, 2)
+  totalPrice     Decimal @db.Decimal(10, 2)
+
+  // Relations
+  pharmacySale PharmacySale @relation(fields: [pharmacySaleId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
+}
+
+// ==========================================
+// 11. BILLING & INSURANCE
+// ==========================================
+
+model Invoice {
+  id             String        @id @default(uuid())
+  patientId      String
+  admissionId    String?
+  visitId        String?
+  invoiceDate    DateTime      @default(now())
+  totalAmount    Decimal       @db.Decimal(12, 2)
+  taxAmount      Decimal       @db.Decimal(12, 2)
+  discountAmount Decimal       @db.Decimal(12, 2)
+  netAmount      Decimal       @db.Decimal(12, 2)
+  status         InvoiceStatus
+
+  // Relations
+  patient   Patient       @relation(fields: [patientId], references: [id])
+  admission Admission?    @relation(fields: [admissionId], references: [id])
+  visit     OpdVisit?     @relation(fields: [visitId], references: [id])
+  items     InvoiceItem[]
+}
+
+model InvoiceItem {
+  id             String  @id @default(uuid())
+  invoiceId      String
+  serviceId      String
+  serviceOrderId String? // Link to CPOE for Audit Trail
+  itemName       String
+  quantity       Int
+  unitPrice      Decimal @db.Decimal(12, 2)
+  total          Decimal @db.Decimal(12, 2)
+
+  // Relations
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id])
+  service      Service       @relation(fields: [serviceId], references: [id])
+  serviceOrder ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
+}
+
+model InsuranceClaim {
+  id             String      @id @default(uuid())
+  admissionId    String
+  providerName   String
+  policyNumber   String
+  claimAmount    Decimal     @db.Decimal(12, 2)
+  approvedAmount Decimal?    @db.Decimal(12, 2)
+  status         ClaimStatus
+  submissionDate DateTime    @default(now())
+
+  // Relations
+  admission Admission @relation(fields: [admissionId], references: [id])
+}
