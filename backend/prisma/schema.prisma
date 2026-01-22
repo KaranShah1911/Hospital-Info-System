@@ -6,12 +6,13 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
 // ==========================================
 // 1. ENUMS (Strict Typing)
 // ==========================================
 
 enum UserRole {
-  Admin 
+  Admin
   Doctor
   Nurse
   Receptionist
@@ -152,43 +153,43 @@ enum ClaimStatus {
 // ==========================================
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
+  id           String    @id @default(uuid())
+  email        String    @unique
   passwordHash String
   role         UserRole
-  isActive     Boolean       @default(true)
+  isActive     Boolean   @default(true)
   lastLogin    DateTime?
-  createdAt    DateTime      @default(now())
-  
+  createdAt    DateTime  @default(now())
+
   // Relations
   staffProfile StaffProfile?
   labResults   LabResult[]   @relation("ResultTechnician") // If LabTech
 }
 
 model StaffProfile {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
+  id                 String  @id @default(uuid())
+  userId             String  @unique
   departmentId       String?
   fullName           String
   qualification      String?
-  registrationNumber String?  // Medical Council ID
+  registrationNumber String? // Medical Council ID
   contactNumber      String?
   shiftTiming        String?
 
   // Relations
-  user               User        @relation(fields: [userId], references: [id])
-  department         Department? @relation(fields: [departmentId], references: [id])
-  
+  user       User        @relation(fields: [userId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
   // "Doctor" Relationships
-  headOfDepartments  Department[]      @relation("HeadDoctor")
-  appointments       Appointment[]
-  opdVisits          OpdVisit[]
-  admissions         Admission[]       @relation("AdmittingDoctor")
-  surgeries          Surgery[]         @relation("Surgeon")
-  clinicalNotes      ClinicalNote[]
-  serviceOrders      ServiceOrder[]
-  verifiedResults    LabResult[]       @relation("ResultVerifier")
-  prescriptions      Prescription[]
+  headOfDepartments Department[]   @relation("HeadDoctor")
+  appointments      Appointment[]
+  opdVisits         OpdVisit[]
+  admissions        Admission[]    @relation("AdmittingDoctor")
+  surgeries         Surgery[]      @relation("Surgeon")
+  clinicalNotes     ClinicalNote[]
+  serviceOrders     ServiceOrder[]
+  verifiedResults   LabResult[]    @relation("ResultVerifier")
+  prescriptions     Prescription[]
 }
 
 // ==========================================
@@ -217,11 +218,11 @@ model Service {
   category     ServiceCategory
   departmentId String
   basePrice    Decimal         @db.Decimal(10, 2)
-  code         String?         // CPT/HCPCS Code
+  code         String? // CPT/HCPCS Code
   isActive     Boolean         @default(true)
 
   // Relations
-  department   Department      @relation(fields: [departmentId], references: [id])
+  department    Department     @relation(fields: [departmentId], references: [id])
   serviceOrders ServiceOrder[]
   invoiceItems  InvoiceItem[]
 }
@@ -235,8 +236,8 @@ model Ward {
   basePricePerDay Decimal @db.Decimal(10, 2)
 
   // Relations
-  department      Department @relation(fields: [departmentId], references: [id])
-  beds            Bed[]
+  department Department @relation(fields: [departmentId], references: [id])
+  beds       Bed[]
 }
 
 model Bed {
@@ -246,7 +247,7 @@ model Bed {
   status    BedStatus
 
   // Relations
-  ward      Ward           @relation(fields: [wardId], references: [id])
+  ward      Ward          @relation(fields: [wardId], references: [id])
   transfers BedTransfer[]
 }
 
@@ -255,11 +256,11 @@ model Bed {
 // ==========================================
 
 model Patient {
-  id                    String    @id @default(uuid())
-  uhid                  String    @unique // Indexed automatically by @unique
+  id                    String   @id @default(uuid())
+  uhid                  String   @unique // Indexed automatically by @unique
   firstName             String
   lastName              String
-  dob                   DateTime  @db.Date
+  dob                   DateTime @db.Date
   gender                String
   bloodGroup            String?
   phone                 String
@@ -267,19 +268,19 @@ model Patient {
   address               String?
   emergencyContactName  String?
   emergencyContactPhone String?
-  registrationDate      DateTime  @default(now())
+  registrationDate      DateTime @default(now())
 
   // Relations
-  medicalHistory   MedicalHistory[]
-  documents        PatientDocument[]
-  appointments     Appointment[]
-  opdVisits        OpdVisit[]
-  admissions       Admission[]
-  clinicalNotes    ClinicalNote[]
-  serviceOrders    ServiceOrder[]
-  prescriptions    Prescription[]
-  pharmacySales    PharmacySale[]
-  invoices         Invoice[]
+  medicalHistory MedicalHistory[]
+  documents      PatientDocument[]
+  appointments   Appointment[]
+  opdVisits      OpdVisit[]
+  admissions     Admission[]
+  clinicalNotes  ClinicalNote[]
+  serviceOrders  ServiceOrder[]
+  prescriptions  Prescription[]
+  pharmacySales  PharmacySale[]
+  invoices       Invoice[]
 }
 
 // ==========================================
@@ -289,15 +290,15 @@ model Patient {
 model MedicalHistory {
   id            String    @id @default(uuid())
   patientId     String
-  category      String    // Allergy, ChronicCondition, etc.
+  category      String // Allergy, ChronicCondition, etc.
   name          String
   severity      String?
-  status        String?   // Active, Resolved
+  status        String? // Active, Resolved
   diagnosedDate DateTime? @db.Date
   notes         String?
 
   // Relations
-  patient       Patient   @relation(fields: [patientId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 }
 
 model PatientDocument {
@@ -305,15 +306,15 @@ model PatientDocument {
   patientId   String
   visitId     String?
   admissionId String?
-  category    String   // LabReport, Radiology, ConsentForm
+  category    String // LabReport, Radiology, ConsentForm
   fileUrl     String
   uploadedBy  String?
   uploadedAt  DateTime @default(now())
 
   // Relations
-  patient     Patient    @relation(fields: [patientId], references: [id])
-  visit       OpdVisit?  @relation(fields: [visitId], references: [id])
-  admission   Admission? @relation(fields: [admissionId], references: [id])
+  patient   Patient    @relation(fields: [patientId], references: [id])
+  visit     OpdVisit?  @relation(fields: [visitId], references: [id])
+  admission Admission? @relation(fields: [admissionId], references: [id])
 }
 
 // ==========================================
@@ -331,29 +332,29 @@ model Appointment {
   type            AppointmentType
 
   // Relations
-  patient         Patient      @relation(fields: [patientId], references: [id])
-  doctor          StaffProfile @relation(fields: [doctorId], references: [id])
-  department      Department   @relation(fields: [departmentId], references: [id])
-  opdVisit        OpdVisit?    // 1:1 Relation
+  patient    Patient      @relation(fields: [patientId], references: [id])
+  doctor     StaffProfile @relation(fields: [doctorId], references: [id])
+  department Department   @relation(fields: [departmentId], references: [id])
+  opdVisit   OpdVisit? // 1:1 Relation
 }
 
 model OpdVisit {
-  id            String      @id @default(uuid())
-  appointmentId String?     @unique // Nullable for Emergency
+  id            String   @id @default(uuid())
+  appointmentId String?  @unique // Nullable for Emergency
   patientId     String
   doctorId      String
-  visitDate     DateTime    @default(now())
-  
+  visitDate     DateTime @default(now())
+
   visitType     VisitType
   triageColor   TriageColor?
   status        VisitStatus
-  isMedicoLegal Boolean     @default(false)
+  isMedicoLegal Boolean      @default(false)
 
   // Relations
-  appointment   Appointment?      @relation(fields: [appointmentId], references: [id])
-  patient       Patient           @relation(fields: [patientId], references: [id])
-  doctor        StaffProfile      @relation(fields: [doctorId], references: [id])
-  
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      StaffProfile @relation(fields: [doctorId], references: [id])
+
   clinicalNotes ClinicalNote[]
   serviceOrders ServiceOrder[]
   prescriptions Prescription[]
@@ -366,32 +367,32 @@ model OpdVisit {
 // ==========================================
 
 model Admission {
-  id                String          @id @default(uuid())
-  patientId         String
-  admittingDoctorId String
-  departmentId      String
-  admissionDate     DateTime        @default(now())
-  dischargeDate     DateTime?
+  id                 String    @id @default(uuid())
+  patientId          String
+  admittingDoctorId  String
+  departmentId       String
+  admissionDate      DateTime  @default(now())
+  dischargeDate      DateTime?
   reasonForAdmission String?
 
-  admissionType     AdmissionType
-  status            AdmissionStatus
-  dischargeType     DischargeType?
-  mlc               Boolean         @default(false)
+  admissionType AdmissionType
+  status        AdmissionStatus
+  dischargeType DischargeType?
+  mlc           Boolean         @default(false)
 
   // Relations
-  patient           Patient           @relation(fields: [patientId], references: [id])
-  admittingDoctor   StaffProfile      @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
-  department        Department        @relation(fields: [departmentId], references: [id])
-  
-  bedTransfers      BedTransfer[]
-  surgeries         Surgery[]
-  clinicalNotes     ClinicalNote[]
-  serviceOrders     ServiceOrder[]
-  prescriptions     Prescription[]
-  documents         PatientDocument[]
-  invoices          Invoice[]
-  insuranceClaims   InsuranceClaim[]
+  patient         Patient      @relation(fields: [patientId], references: [id])
+  admittingDoctor StaffProfile @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
+  department      Department   @relation(fields: [departmentId], references: [id])
+
+  bedTransfers    BedTransfer[]
+  surgeries       Surgery[]
+  clinicalNotes   ClinicalNote[]
+  serviceOrders   ServiceOrder[]
+  prescriptions   Prescription[]
+  documents       PatientDocument[]
+  invoices        Invoice[]
+  insuranceClaims InsuranceClaim[]
 }
 
 model BedTransfer {
@@ -403,8 +404,8 @@ model BedTransfer {
   reason      String?
 
   // Relations
-  admission   Admission @relation(fields: [admissionId], references: [id])
-  bed         Bed       @relation(fields: [bedId], references: [id])
+  admission Admission @relation(fields: [admissionId], references: [id])
+  bed       Bed       @relation(fields: [bedId], references: [id])
 }
 
 model Surgery {
@@ -418,9 +419,9 @@ model Surgery {
   notes         String?
 
   // Relations
-  admission     Admission           @relation(fields: [admissionId], references: [id])
-  surgeon       StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
-  checklists    SurgicalChecklist[]
+  admission  Admission           @relation(fields: [admissionId], references: [id])
+  surgeon    StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
+  checklists SurgicalChecklist[]
 }
 
 model SurgicalChecklist {
@@ -429,11 +430,11 @@ model SurgicalChecklist {
   stage     ChecklistStage
   itemName  String
   isChecked Boolean        @default(false)
-  checkedBy String?        // Could link to User/Staff
+  checkedBy String? // Could link to User/Staff
   timestamp DateTime       @default(now())
 
   // Relations
-  surgery   Surgery        @relation(fields: [surgeryId], references: [id])
+  surgery Surgery @relation(fields: [surgeryId], references: [id])
 }
 
 // ==========================================
@@ -447,44 +448,44 @@ model ClinicalNote {
   admissionId String?
   doctorId    String
   noteType    NoteType
-  
+
   // Structured Content (SOAP)
-  content     Json     
-  
+  content Json
+
   createdAt   DateTime @default(now())
   isFinalized Boolean  @default(false)
 
   // Relations
-  patient     Patient      @relation(fields: [patientId], references: [id])
-  visit       OpdVisit?    @relation(fields: [visitId], references: [id])
-  admission   Admission?   @relation(fields: [admissionId], references: [id])
-  doctor      StaffProfile @relation(fields: [doctorId], references: [id])
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [userId])
 }
 
 model ServiceOrder {
-  id                 String        @id @default(uuid())
-  patientId          String
-  doctorId           String
-  visitId            String?
-  admissionId        String?
-  serviceId          String
-  
+  id          String  @id @default(uuid())
+  patientId   String
+  doctorId    String
+  visitId     String?
+  admissionId String?
+  serviceId   String
+
   orderType          OrderType
   priority           OrderPriority
   clinicalIndication String?
-  
-  status             OrderStatus
-  orderDate          DateTime      @default(now())
+
+  status    OrderStatus
+  orderDate DateTime    @default(now())
 
   // Relations
-  patient            Patient       @relation(fields: [patientId], references: [id])
-  doctor             StaffProfile  @relation(fields: [doctorId], references: [id])
-  visit              OpdVisit?     @relation(fields: [visitId], references: [id])
-  admission          Admission?    @relation(fields: [admissionId], references: [id])
-  service            Service       @relation(fields: [serviceId], references: [id])
-  
-  labResults         LabResult[]
-  invoiceItems       InvoiceItem[] // Links order to billing
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+  service   Service      @relation(fields: [serviceId], references: [id])
+
+  labResults   LabResult[]
+  invoiceItems InvoiceItem[] // Links order to billing
 }
 
 // ==========================================
@@ -503,9 +504,9 @@ model LabResult {
   resultDate         DateTime @default(now())
 
   // Relations
-  serviceOrder       ServiceOrder  @relation(fields: [serviceOrderId], references: [id])
-  technician         User?         @relation("ResultTechnician", fields: [technicianId], references: [id])
-  verifiedBy         StaffProfile? @relation("ResultVerifier", fields: [verifiedByDoctorId], references: [id])
+  serviceOrder ServiceOrder  @relation(fields: [serviceOrderId], references: [id])
+  technician   User?         @relation("ResultTechnician", fields: [technicianId], references: [id])
+  verifiedBy   StaffProfile? @relation("ResultVerifier", fields: [verifiedByDoctorId], references: [id])
 }
 
 // ==========================================
@@ -521,17 +522,17 @@ model Prescription {
   date        DateTime @default(now())
 
   // Relations
-  patient     Patient            @relation(fields: [patientId], references: [id])
-  doctor      StaffProfile       @relation(fields: [doctorId], references: [id])
-  visit       OpdVisit?          @relation(fields: [visitId], references: [id])
-  admission   Admission?         @relation(fields: [admissionId], references: [id])
-  
-  items       PrescriptionItem[]
-  sales       PharmacySale[]
+  patient   Patient      @relation(fields: [patientId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+  visit     OpdVisit?    @relation(fields: [visitId], references: [id])
+  admission Admission?   @relation(fields: [admissionId], references: [id])
+
+  items PrescriptionItem[]
+  sales PharmacySale[]
 }
 
 model PrescriptionItem {
-  id             String @id @default(uuid())
+  id             String  @id @default(uuid())
   prescriptionId String
   medicineId     String
   dosage         String
@@ -540,8 +541,8 @@ model PrescriptionItem {
   instruction    String?
 
   // Relations
-  prescription   Prescription @relation(fields: [prescriptionId], references: [id])
-  medicine       Medicine     @relation(fields: [medicineId], references: [id])
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
 }
 
 model Medicine {
@@ -567,9 +568,9 @@ model PharmacySale {
   totalAmount    Decimal  @db.Decimal(10, 2)
 
   // Relations
-  patient        Patient       @relation(fields: [patientId], references: [id])
-  prescription   Prescription? @relation(fields: [prescriptionId], references: [id])
-  items          SaleItem[]
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  prescription Prescription? @relation(fields: [prescriptionId], references: [id])
+  items        SaleItem[]
 }
 
 model SaleItem {
@@ -581,8 +582,8 @@ model SaleItem {
   totalPrice     Decimal @db.Decimal(10, 2)
 
   // Relations
-  pharmacySale   PharmacySale @relation(fields: [pharmacySaleId], references: [id])
-  medicine       Medicine     @relation(fields: [medicineId], references: [id])
+  pharmacySale PharmacySale @relation(fields: [pharmacySaleId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
 }
 
 // ==========================================
@@ -602,10 +603,10 @@ model Invoice {
   status         InvoiceStatus
 
   // Relations
-  patient        Patient       @relation(fields: [patientId], references: [id])
-  admission      Admission?    @relation(fields: [admissionId], references: [id])
-  visit          OpdVisit?     @relation(fields: [visitId], references: [id])
-  items          InvoiceItem[]
+  patient   Patient       @relation(fields: [patientId], references: [id])
+  admission Admission?    @relation(fields: [admissionId], references: [id])
+  visit     OpdVisit?     @relation(fields: [visitId], references: [id])
+  items     InvoiceItem[]
 }
 
 model InvoiceItem {
@@ -619,9 +620,9 @@ model InvoiceItem {
   total          Decimal @db.Decimal(12, 2)
 
   // Relations
-  invoice        Invoice       @relation(fields: [invoiceId], references: [id])
-  service        Service       @relation(fields: [serviceId], references: [id])
-  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id])
+  service      Service       @relation(fields: [serviceId], references: [id])
+  serviceOrder ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
 }
 
 model InsuranceClaim {
@@ -635,5 +636,5 @@ model InsuranceClaim {
   submissionDate DateTime    @default(now())
 
   // Relations
-  admission      Admission   @relation(fields: [admissionId], references: [id])
+  admission Admission @relation(fields: [admissionId], references: [id])
 }

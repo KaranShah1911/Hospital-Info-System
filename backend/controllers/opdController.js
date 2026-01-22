@@ -1,25 +1,6 @@
 import prisma from '../config/db.js';
-
-export const checkIn = async (req, res) => {
-    try {
-        const { patientId, doctorId, visitType } = req.body;
-        // visitType: 'OPD', 'Emergency', 'IPD_Checkin'
-
-        const visit = await prisma.opdVisit.create({
-            data: {
-                patientId,
-                doctorId,
-                visitType,
-                status: 'Waiting', // Default
-                visitDate: new Date(), // Arrival Time
-            }
-        });
-
-        res.status(201).json(visit);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
 export const triagePatient = async (req, res) => {
     try {
@@ -98,5 +79,135 @@ export const getLiveDashboard = async (req, res) => {
         res.json(dashboardData);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+// ritu ke routes : 
+// Handles Initial Emergency Visit (Triage) - Track 2 Step 1
+// Logic: Creates a visit directly without a prior appointment for emergencies.
+export const createEmergencyVisit = async (req, res) => {
+    try {
+        const { patientId, doctorId, triageColor } = req.body;
+
+        const visit = await prisma.opdVisit.create({
+            data: {
+                patientId,
+                doctorId,
+                appointmentId: null, // No booking
+                visitType: "Emergency",
+                triageColor: triageColor || "Red",
+                status: "Triaged",
+                visitDate: new Date()
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, visit, "Emergency visit created"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+// Handles Saving Clinical Notes (Diagnosis/Plan) - Track 1 Step 3
+// Logic: Records the doctor's findings in a structured format (SOAP).
+// export const createClinicalNote = async (req, res) => {
+//   try {
+//     const { patientId, visitId, doctorId, noteType, content } = req.body;
+
+//     const note = await prisma.clinicalNote.create({
+//         data: {
+//             patientId,
+//             visitId,
+//             doctorId,
+//             noteType: noteType || "SOAP",
+//             content, // JSON content
+//             isFinalized: true
+//         }
+//     });
+
+//     res.status(201).json(new ApiResponse(201, note, "Clinical note saved"));
+//   } catch (error) {
+//     res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+//   }
+// };
+
+export const createClinicalNote = async (req, res) => {
+    try {
+        const { uhid, visitId, doctorId, noteType, content } = req.body;
+
+        // Find Patient by UHID
+        const patient = await prisma.patient.findUnique({
+            where: { uhid }
+        });
+
+        if (!patient) {
+            throw new ApiError(404, "Patient with this UHID not found");
+        }
+
+        const note = await prisma.clinicalNote.create({
+            data: {
+                patientId: patient.id,
+                visitId,
+                doctorId, // Keeping plain doctorId from body for now as auth middleware is pending
+                noteType: noteType || "SOAP",
+                content, // JSON content
+                isFinalized: true
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, note, "Clinical note saved"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+// Handles Ordering Services (Lab/Radiology) - Track 1 Step 3
+// Logic: Creates a service order for a patient.
+export const createServiceOrder = async (req, res) => {
+    try {
+        const { patientId, visitId, admissionId, serviceId, doctorId, orderType, priority } = req.body;
+
+        const order = await prisma.serviceOrder.create({
+            data: {
+                patientId,
+                visitId, // Optional
+                admissionId, // Optional
+                doctorId,
+                serviceId,
+                orderType,
+                priority: priority || "Routine",
+                status: "Ordered"
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, order, "Service ordered successfully"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+
+// Avoided temporary
+// Get Waiting List for Doctor
+export const getWaitingPatients = async (req, res) => {
+    try {
+        const { doctorId } = req.query;
+        if (!doctorId) throw new ApiError(400, "Doctor ID required");
+
+        const visits = await prisma.opdVisit.findMany({
+            where: {
+                doctorId,
+                status: "Waiting",
+                visitDate: {
+                    gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today
+                }
+            },
+            include: {
+                patient: { select: { firstName: true, lastName: true, uhid: true, gender: true, dob: true } }
+            }
+        });
+
+        res.status(200).json(new ApiResponse(200, visits, "Waiting list fetched"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
 };

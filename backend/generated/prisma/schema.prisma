@@ -459,7 +459,7 @@ model ClinicalNote {
   patient   Patient      @relation(fields: [patientId], references: [id])
   visit     OpdVisit?    @relation(fields: [visitId], references: [id])
   admission Admission?   @relation(fields: [admissionId], references: [id])
-  doctor    StaffProfile @relation(fields: [doctorId], references: [id])
+  doctor    StaffProfile @relation(fields: [doctorId], references: [userId])
 }
 
 model ServiceOrder {
