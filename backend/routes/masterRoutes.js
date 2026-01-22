@@ -1,5 +1,5 @@
 import express from 'express';
-import { createDepartment, getDepartments, createService, getServices, createMedicine } from '../controllers/masterController.js';
+import { createDepartment, getDepartments, createService, getServices, createMedicine, getMedicines } from '../controllers/masterController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -11,5 +11,6 @@ router.post('/services', authenticateToken, authorizeRoles('Admin'), createServi
 router.get('/services', getServices);
 
 router.post('/medicines', authenticateToken, authorizeRoles('Admin', 'Pharmacist'), createMedicine);
+router.get('/medicines', getMedicines);
 
 export default router;

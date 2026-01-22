@@ -69,3 +69,12 @@ export const createMedicine = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getMedicines = async (req, res) => {
+    try {
+        const medicines = await prisma.medicine.findMany();
+        res.json(medicines);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
