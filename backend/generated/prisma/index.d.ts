@@ -5345,7 +5345,6 @@ export namespace Prisma {
 
   export type StaffProfileMinAggregateOutputType = {
     id: string | null
-    userId: string | null
     departmentId: string | null
     fullName: string | null
     qualification: string | null
@@ -5356,7 +5355,6 @@ export namespace Prisma {
 
   export type StaffProfileMaxAggregateOutputType = {
     id: string | null
-    userId: string | null
     departmentId: string | null
     fullName: string | null
     qualification: string | null
@@ -5367,7 +5365,6 @@ export namespace Prisma {
 
   export type StaffProfileCountAggregateOutputType = {
     id: number
-    userId: number
     departmentId: number
     fullName: number
     qualification: number
@@ -5380,7 +5377,6 @@ export namespace Prisma {
 
   export type StaffProfileMinAggregateInputType = {
     id?: true
-    userId?: true
     departmentId?: true
     fullName?: true
     qualification?: true
@@ -5391,7 +5387,6 @@ export namespace Prisma {
 
   export type StaffProfileMaxAggregateInputType = {
     id?: true
-    userId?: true
     departmentId?: true
     fullName?: true
     qualification?: true
@@ -5402,7 +5397,6 @@ export namespace Prisma {
 
   export type StaffProfileCountAggregateInputType = {
     id?: true
-    userId?: true
     departmentId?: true
     fullName?: true
     qualification?: true
@@ -5486,7 +5480,6 @@ export namespace Prisma {
 
   export type StaffProfileGroupByOutputType = {
     id: string
-    userId: string
     departmentId: string | null
     fullName: string
     qualification: string | null
@@ -5514,7 +5507,6 @@ export namespace Prisma {
 
   export type StaffProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
-    userId?: boolean
     departmentId?: boolean
     fullName?: boolean
     qualification?: boolean
@@ -5537,7 +5529,6 @@ export namespace Prisma {
 
   export type StaffProfileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
-    userId?: boolean
     departmentId?: boolean
     fullName?: boolean
     qualification?: boolean
@@ -5550,7 +5541,6 @@ export namespace Prisma {
 
   export type StaffProfileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
-    userId?: boolean
     departmentId?: boolean
     fullName?: boolean
     qualification?: boolean
@@ -5563,7 +5553,6 @@ export namespace Prisma {
 
   export type StaffProfileSelectScalar = {
     id?: boolean
-    userId?: boolean
     departmentId?: boolean
     fullName?: boolean
     qualification?: boolean
@@ -5572,7 +5561,7 @@ export namespace Prisma {
     shiftTiming?: boolean
   }
 
-  export type StaffProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "departmentId" | "fullName" | "qualification" | "registrationNumber" | "contactNumber" | "shiftTiming", ExtArgs["result"]["staffProfile"]>
+  export type StaffProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "departmentId" | "fullName" | "qualification" | "registrationNumber" | "contactNumber" | "shiftTiming", ExtArgs["result"]["staffProfile"]>
   export type StaffProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     department?: boolean | StaffProfile$departmentArgs<ExtArgs>
@@ -5613,7 +5602,6 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
-      userId: string
       departmentId: string | null
       fullName: string
       qualification: string | null
@@ -6055,7 +6043,6 @@ export namespace Prisma {
    */
   interface StaffProfileFieldRefs {
     readonly id: FieldRef<"StaffProfile", 'String'>
-    readonly userId: FieldRef<"StaffProfile", 'String'>
     readonly departmentId: FieldRef<"StaffProfile", 'String'>
     readonly fullName: FieldRef<"StaffProfile", 'String'>
     readonly qualification: FieldRef<"StaffProfile", 'String'>
@@ -35046,7 +35033,6 @@ export namespace Prisma {
 
   export const StaffProfileScalarFieldEnum: {
     id: 'id',
-    userId: 'userId',
     departmentId: 'departmentId',
     fullName: 'fullName',
     qualification: 'qualification',
@@ -35881,7 +35867,6 @@ export namespace Prisma {
     OR?: StaffProfileWhereInput[]
     NOT?: StaffProfileWhereInput | StaffProfileWhereInput[]
     id?: StringFilter<"StaffProfile"> | string
-    userId?: StringFilter<"StaffProfile"> | string
     departmentId?: StringNullableFilter<"StaffProfile"> | string | null
     fullName?: StringFilter<"StaffProfile"> | string
     qualification?: StringNullableFilter<"StaffProfile"> | string | null
@@ -35903,7 +35888,6 @@ export namespace Prisma {
 
   export type StaffProfileOrderByWithRelationInput = {
     id?: SortOrder
-    userId?: SortOrder
     departmentId?: SortOrderInput | SortOrder
     fullName?: SortOrder
     qualification?: SortOrderInput | SortOrder
@@ -35925,7 +35909,6 @@ export namespace Prisma {
 
   export type StaffProfileWhereUniqueInput = Prisma.AtLeast<{
     id?: string
-    userId?: string
     AND?: StaffProfileWhereInput | StaffProfileWhereInput[]
     OR?: StaffProfileWhereInput[]
     NOT?: StaffProfileWhereInput | StaffProfileWhereInput[]
@@ -35946,11 +35929,10 @@ export namespace Prisma {
     serviceOrders?: ServiceOrderListRelationFilter
     verifiedResults?: LabResultListRelationFilter
     prescriptions?: PrescriptionListRelationFilter
-  }, "id" | "userId">
+  }, "id">
 
   export type StaffProfileOrderByWithAggregationInput = {
     id?: SortOrder
-    userId?: SortOrder
     departmentId?: SortOrderInput | SortOrder
     fullName?: SortOrder
     qualification?: SortOrderInput | SortOrder
@@ -35967,7 +35949,6 @@ export namespace Prisma {
     OR?: StaffProfileScalarWhereWithAggregatesInput[]
     NOT?: StaffProfileScalarWhereWithAggregatesInput | StaffProfileScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"StaffProfile"> | string
-    userId?: StringWithAggregatesFilter<"StaffProfile"> | string
     departmentId?: StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
     fullName?: StringWithAggregatesFilter<"StaffProfile"> | string
     qualification?: StringNullableWithAggregatesFilter<"StaffProfile"> | string | null
@@ -37935,7 +37916,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -37955,8 +37935,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -37975,7 +37954,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -37996,7 +37974,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -38015,8 +37992,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateManyInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -38026,7 +38002,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -38036,7 +38011,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -40245,7 +40219,6 @@ export namespace Prisma {
 
   export type StaffProfileCountOrderByAggregateInput = {
     id?: SortOrder
-    userId?: SortOrder
     departmentId?: SortOrder
     fullName?: SortOrder
     qualification?: SortOrder
@@ -40256,7 +40229,6 @@ export namespace Prisma {
 
   export type StaffProfileMaxOrderByAggregateInput = {
     id?: SortOrder
-    userId?: SortOrder
     departmentId?: SortOrder
     fullName?: SortOrder
     qualification?: SortOrder
@@ -40267,7 +40239,6 @@ export namespace Prisma {
 
   export type StaffProfileMinOrderByAggregateInput = {
     id?: SortOrder
-    userId?: SortOrder
     departmentId?: SortOrder
     fullName?: SortOrder
     qualification?: SortOrder
@@ -45549,7 +45520,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutUserInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -45568,7 +45538,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutUserInput = {
-    id?: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -45635,7 +45604,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45654,7 +45622,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46413,7 +46380,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutHeadOfDepartmentsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -46432,8 +46398,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutHeadOfDepartmentsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -46456,7 +46421,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutDepartmentInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -46475,8 +46439,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutDepartmentInput = {
-    id?: string
-    userId: string
+    id: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -46659,7 +46622,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutHeadOfDepartmentsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46679,7 +46641,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutHeadOfDepartmentsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46717,7 +46678,6 @@ export namespace Prisma {
     OR?: StaffProfileScalarWhereInput[]
     NOT?: StaffProfileScalarWhereInput | StaffProfileScalarWhereInput[]
     id?: StringFilter<"StaffProfile"> | string
-    userId?: StringFilter<"StaffProfile"> | string
     departmentId?: StringNullableFilter<"StaffProfile"> | string | null
     fullName?: StringFilter<"StaffProfile"> | string
     qualification?: StringNullableFilter<"StaffProfile"> | string | null
@@ -48248,7 +48208,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutAppointmentsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -48267,8 +48226,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutAppointmentsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -48429,7 +48387,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutAppointmentsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -48449,7 +48406,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutAppointmentsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -48627,7 +48583,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutOpdVisitsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -48646,8 +48601,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutOpdVisitsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -48943,7 +48897,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutOpdVisitsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -48963,7 +48916,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutOpdVisitsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49116,7 +49068,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutAdmissionsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -49135,8 +49086,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutAdmissionsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -49516,7 +49466,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutAdmissionsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49536,7 +49485,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutAdmissionsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -49922,7 +49870,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutSurgeriesInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -49941,8 +49888,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutSurgeriesInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -50057,7 +50003,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutSurgeriesInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50077,7 +50022,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutSurgeriesInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50323,7 +50267,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutClinicalNotesInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -50342,8 +50285,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutClinicalNotesInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -50534,7 +50476,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutClinicalNotesInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50554,7 +50495,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutClinicalNotesInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50627,7 +50567,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutServiceOrdersInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -50646,8 +50585,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutServiceOrdersInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -50915,7 +50853,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutServiceOrdersInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -50935,7 +50872,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutServiceOrdersInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51176,7 +51112,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutVerifiedResultsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -51195,8 +51130,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutVerifiedResultsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -51304,7 +51238,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutVerifiedResultsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51324,7 +51257,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutVerifiedResultsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51397,7 +51329,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateWithoutPrescriptionsInput = {
-    id?: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -51416,8 +51347,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileUncheckedCreateWithoutPrescriptionsInput = {
-    id?: string
-    userId: string
+    id: string
     departmentId?: string | null
     fullName: string
     qualification?: string | null
@@ -51650,7 +51580,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutPrescriptionsInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51670,7 +51599,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutPrescriptionsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     departmentId?: NullableStringFieldUpdateOperationsInput | string | null
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53487,8 +53415,7 @@ export namespace Prisma {
   }
 
   export type StaffProfileCreateManyDepartmentInput = {
-    id?: string
-    userId: string
+    id: string
     fullName: string
     qualification?: string | null
     registrationNumber?: string | null
@@ -53537,7 +53464,6 @@ export namespace Prisma {
   }
 
   export type StaffProfileUpdateWithoutDepartmentInput = {
-    id?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53557,7 +53483,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateWithoutDepartmentInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53576,7 +53501,6 @@ export namespace Prisma {
 
   export type StaffProfileUncheckedUpdateManyWithoutDepartmentInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     fullName?: StringFieldUpdateOperationsInput | string
     qualification?: NullableStringFieldUpdateOperationsInput | string | null
     registrationNumber?: NullableStringFieldUpdateOperationsInput | string | null

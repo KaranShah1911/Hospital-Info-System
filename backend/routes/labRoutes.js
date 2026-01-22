@@ -5,6 +5,6 @@ import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware
 const router = express.Router();
 
 router.get('/worklist', authenticateToken, authorizeRoles('LabTech', 'Admin'), getLabWorklist);
-router.post('/submit-result', authenticateToken, authorizeRoles('LabTech', 'Admin'), submitLabResult);
+router.post('/submit-result', authenticateToken, authorizeRoles('LabTech'), submitLabResult);
 
 export default router;

@@ -132,7 +132,6 @@ exports.Prisma.UserScalarFieldEnum = {
 
 exports.Prisma.StaffProfileScalarFieldEnum = {
   id: 'id',
-  userId: 'userId',
   departmentId: 'departmentId',
   fullName: 'fullName',
   qualification: 'qualification',

@@ -1,11 +1,12 @@
 import prisma from '../config/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { saveToken } from '../utils/tokenHandler.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 export const register = async (req, res) => {
-    try {
+    try { 
         const { email, password, role, fullName, departmentId, qualification } = req.body;
  
         // Check if user exists
@@ -25,7 +26,7 @@ export const register = async (req, res) => {
 
             const staffProfile = await tx.staffProfile.create({
                 data: {
-                    userId: user.id,
+                    id: user.id,
                     fullName,
                     departmentId,
                     qualification
@@ -67,8 +68,9 @@ export const login = async (req, res) => {
             data: { lastLogin: new Date() }
         });
 
+        saveToken(token, res);
+
         res.json({
-            accessToken: token,
             role: user.role,
             staffId: user.staffProfile?.id,
             fullName: user.staffProfile?.fullName

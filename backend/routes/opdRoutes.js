@@ -1,13 +1,7 @@
 import express from 'express';
-import { triagePatient, getLiveDashboard } from '../controllers/opdController.js';
+import { triagePatient, getLiveDashboard, createEmergencyVisit, createClinicalNote, getWaitingPatients  } from '../controllers/opdController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
-import { 
-    createEmergencyVisit, 
-    createClinicalNote, 
-    createServiceOrder, 
-    getWaitingPatients 
-} from '../controllers/opdController.js';
-
+import { createBatchOrders } from '../controllers/orderController.js';
 
 const router = express.Router();
 
@@ -28,6 +22,8 @@ router.get('/waiting', authenticateToken, authorizeRoles('Doctor'), getWaitingPa
 // Clinical Actions (can be here or separate)
 // Note: In rest design, maybe POST /opd-visits/:id/notes, but flat is okay too
 router.post('/clinical-notes', authenticateToken, authorizeRoles('Doctor'), createClinicalNote);
-router.post('/service-orders', authenticateToken, authorizeRoles('Doctor'), createServiceOrder);
+// router.post('/service-orders', authenticateToken, authorizeRoles('Doctor'), createServiceOrder);
+router.post('/batch-create', authenticateToken, authorizeRoles('Doctor'), createBatchOrders);
+
 
 export default router;
