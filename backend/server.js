@@ -11,6 +11,8 @@ import orderRoutes from './routes/orderRoutes.js';
 import labRoutes from './routes/labRoutes.js';
 import pharmacyRoutes from './routes/pharmacyRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
+import generalRoutes from './routes/generalRoutes.js';
+import facilityRoutes from './routes/facilityRoutes.js'
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.use('/orders', orderRoutes);
 app.use('/lab', labRoutes);
 app.use('/pharmacy', pharmacyRoutes);
 app.use('/billing', billingRoutes);
+app.use('/general', generalRoutes);
+app.use('/facility', facilityRoutes);
 
 const PORT = process.env.PORT || 3000;
 
