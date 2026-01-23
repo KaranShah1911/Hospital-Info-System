@@ -178,15 +178,30 @@ exports.Prisma.PatientScalarFieldEnum = {
   id: 'id',
   uhid: 'uhid',
   firstName: 'firstName',
+  middleName: 'middleName',
   lastName: 'lastName',
   dob: 'dob',
   gender: 'gender',
-  bloodGroup: 'bloodGroup',
+  maritalStatus: 'maritalStatus',
+  nationality: 'nationality',
   phone: 'phone',
   email: 'email',
-  address: 'address',
+  preferredLanguage: 'preferredLanguage',
+  permanentAddress: 'permanentAddress',
+  currentAddress: 'currentAddress',
+  city: 'city',
+  state: 'state',
+  pincode: 'pincode',
+  idProofType: 'idProofType',
+  idProofNumber: 'idProofNumber',
+  abhaId: 'abhaId',
   emergencyContactName: 'emergencyContactName',
   emergencyContactPhone: 'emergencyContactPhone',
+  emergencyContactRelation: 'emergencyContactRelation',
+  defaultPayerType: 'defaultPayerType',
+  insuranceProvider: 'insuranceProvider',
+  policyNumber: 'policyNumber',
+  isDeceased: 'isDeceased',
   registrationDate: 'registrationDate'
 };
 
@@ -240,6 +255,8 @@ exports.Prisma.AdmissionScalarFieldEnum = {
   patientId: 'patientId',
   admittingDoctorId: 'admittingDoctorId',
   departmentId: 'departmentId',
+  visitId: 'visitId',
+  currentBedId: 'currentBedId',
   admissionDate: 'admissionDate',
   dischargeDate: 'dischargeDate',
   reasonForAdmission: 'reasonForAdmission',
@@ -267,6 +284,12 @@ exports.Prisma.SurgeryScalarFieldEnum = {
   surgeryDate: 'surgeryDate',
   status: 'status',
   notes: 'notes'
+};
+
+exports.Prisma.SurgerySStaffScalarFieldEnum = {
+  surgeryId: 'surgeryId',
+  staffId: 'staffId',
+  role: 'role'
 };
 
 exports.Prisma.SurgicalChecklistScalarFieldEnum = {
@@ -301,6 +324,7 @@ exports.Prisma.ServiceOrderScalarFieldEnum = {
   orderType: 'orderType',
   priority: 'priority',
   clinicalIndication: 'clinicalIndication',
+  isPaid: 'isPaid',
   status: 'status',
   orderDate: 'orderDate'
 };
@@ -323,6 +347,7 @@ exports.Prisma.PrescriptionScalarFieldEnum = {
   doctorId: 'doctorId',
   visitId: 'visitId',
   admissionId: 'admissionId',
+  isPaid: 'isPaid',
   date: 'date'
 };
 
@@ -569,6 +594,7 @@ exports.Prisma.ModelName = {
   Admission: 'Admission',
   BedTransfer: 'BedTransfer',
   Surgery: 'Surgery',
+  SurgerySStaff: 'SurgerySStaff',
   SurgicalChecklist: 'SurgicalChecklist',
   ClinicalNote: 'ClinicalNote',
   ServiceOrder: 'ServiceOrder',

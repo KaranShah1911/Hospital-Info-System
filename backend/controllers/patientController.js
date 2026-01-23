@@ -8,25 +8,55 @@ const generateUHID = async () => {
 
 export const registerPatient = async (req, res) => {
     try {
-        const { firstName, lastName, dob, gender, bloodGroup, phone, address, emergencyContactName, emergencyContactPhone } = req.body;
+        const {
+            firstName, middleName, lastName,
+            dob, gender, maritalStatus, nationality,
+            phone, email, preferredLanguage,
+            permanentAddress, currentAddress, city, state, pincode,
+            idProofType, idProofNumber, abhaId,
+            emergencyContactName, emergencyContactPhone
+        } = req.body;
 
-        // Generate Unique UHID
+        // 1. Check if Phone Already Exists
+        // Note: Phone is not @unique in schema, so we use findFirst. 
+        // If the user wants it STRICTLY unique, we should ideally enforce it in Prisma, 
+        // but for now we enforce it in logic.
+        const existingPatient = await prisma.patient.findFirst({
+            where: { phone }
+        });
+
+        if (existingPatient) {
+            return res.status(400).json({ error: "Patient with this phone number already exists." });
+        }
+
+        // 2. Generate Unique UHID
         let uhid = await generateUHID();
-        // Simple collision check (could be robustified)
         while (await prisma.patient.findUnique({ where: { uhid } })) {
             uhid = await generateUHID();
         }
 
+        // 3. Create Patient
         const patient = await prisma.patient.create({
             data: {
                 uhid,
                 firstName,
+                middleName,
                 lastName,
                 dob: new Date(dob),
                 gender,
-                bloodGroup,
+                maritalStatus,
+                nationality,
                 phone,
-                address,
+                email,
+                preferredLanguage,
+                permanentAddress,
+                currentAddress,
+                city,
+                state,
+                pincode,
+                idProofType,
+                idProofNumber,
+                abhaId,
                 emergencyContactName,
                 emergencyContactPhone
             }

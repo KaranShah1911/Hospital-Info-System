@@ -167,7 +167,6 @@ model User {
 }
 
 model StaffProfile {
-  // id                 String  @id @default(uuid())
   id                 String  @id
   departmentId       String?
   fullName           String
@@ -177,19 +176,20 @@ model StaffProfile {
   shiftTiming        String?
 
   // Relations
-  user       User        @relation(fields: [id], references: [id], onDelete: Cascade)
-  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  user       User        @relation(fields: [id], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
 
   // "Doctor" Relationships
-  headOfDepartments Department[]   @relation("HeadDoctor")
+  headOfDepartments Department[]    @relation("HeadDoctor")
   appointments      Appointment[]
   opdVisits         OpdVisit[]
-  admissions        Admission[]    @relation("AdmittingDoctor")
-  surgeries         Surgery[]      @relation("Surgeon")
+  admissions        Admission[]     @relation("AdmittingDoctor")
+  surgeries         Surgery[]       @relation("Surgeon")
   clinicalNotes     ClinicalNote[]
   serviceOrders     ServiceOrder[]
-  verifiedResults   LabResult[]    @relation("ResultVerifier")
+  verifiedResults   LabResult[]     @relation("ResultVerifier")
   prescriptions     Prescription[]
+  surgerySStaffs    SurgerySStaff[]
 }
 
 // ==========================================
@@ -247,8 +247,9 @@ model Bed {
   status    BedStatus
 
   // Relations
-  ward      Ward          @relation(fields: [wardId], references: [id])
-  transfers BedTransfer[]
+  ward             Ward          @relation(fields: [wardId], references: [id])
+  transfers        BedTransfer[]
+  activeAdmissions Admission[]   @relation("CurrentBed")
 }
 
 // ==========================================
@@ -256,19 +257,42 @@ model Bed {
 // ==========================================
 
 model Patient {
-  id                    String   @id @default(uuid())
-  uhid                  String   @unique // Indexed automatically by @unique
-  firstName             String
-  lastName              String
-  dob                   DateTime @db.Date
-  gender                String
-  bloodGroup            String?
-  phone                 String
-  email                 String?
-  address               String?
-  emergencyContactName  String?
-  emergencyContactPhone String?
-  registrationDate      DateTime @default(now())
+  id   String @id @default(uuid())
+  uhid String @unique
+
+  firstName  String
+  middleName String?
+  lastName   String
+
+  dob           DateTime @db.Date
+  gender        String?
+  maritalStatus String?
+  nationality   String?
+
+  phone             String
+  email             String?
+  preferredLanguage String?
+
+  permanentAddress String?
+  currentAddress   String?
+  city             String?
+  state            String?
+  pincode          String?
+
+  idProofType   String?
+  idProofNumber String?
+  abhaId        String?
+
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+
+  defaultPayerType  String?
+  insuranceProvider String?
+  policyNumber      String?
+
+  isDeceased       Boolean  @default(false)
+  registrationDate DateTime @default(now())
 
   // Relations
   medicalHistory MedicalHistory[]
@@ -282,6 +306,19 @@ model Patient {
   pharmacySales  PharmacySale[]
   invoices       Invoice[]
 }
+
+// model AdmissionAttendant {
+//   id           String    @id @default(uuid())
+//   admissionId  String
+//   name         String
+//   relationship String
+//   phone        String
+//   address      String?
+//   idProofType  String?
+//   idProofNo    String?
+//   isPrimary    Boolean   @default(true)
+//   admission    Admission @relation(fields: [admissionId], references: [id])
+// }
 
 // ==========================================
 // 5. MEDICAL HISTORY & DOCS
@@ -335,7 +372,8 @@ model Appointment {
   patient    Patient      @relation(fields: [patientId], references: [id])
   doctor     StaffProfile @relation(fields: [doctorId], references: [id])
   department Department   @relation(fields: [departmentId], references: [id])
-  opdVisit   OpdVisit? // 1:1 Relation
+
+  opdVisit OpdVisit? // 1:1 Relation
 }
 
 model OpdVisit {
@@ -360,6 +398,7 @@ model OpdVisit {
   prescriptions Prescription[]
   documents     PatientDocument[]
   invoices      Invoice[]
+  admission     Admission? // Inverse relation
 }
 
 // ==========================================
@@ -371,6 +410,8 @@ model Admission {
   patientId          String
   admittingDoctorId  String
   departmentId       String
+  visitId            String?   @unique // Link to source OPD visit (e.g. Emergency admission)
+  currentBedId       String? // Direct link to currently occupied bed
   admissionDate      DateTime  @default(now())
   dischargeDate      DateTime?
   reasonForAdmission String?
@@ -384,6 +425,8 @@ model Admission {
   patient         Patient      @relation(fields: [patientId], references: [id])
   admittingDoctor StaffProfile @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
   department      Department   @relation(fields: [departmentId], references: [id])
+  visit           OpdVisit?    @relation(fields: [visitId], references: [id])
+  currentBed      Bed?         @relation("CurrentBed", fields: [currentBedId], references: [id])
 
   bedTransfers    BedTransfer[]
   surgeries       Surgery[]
@@ -419,9 +462,19 @@ model Surgery {
   notes         String?
 
   // Relations
-  admission  Admission           @relation(fields: [admissionId], references: [id])
-  surgeon    StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
-  checklists SurgicalChecklist[]
+  admission      Admission           @relation(fields: [admissionId], references: [id])
+  surgeon        StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
+  checklists     SurgicalChecklist[]
+  surgerySStaffs SurgerySStaff[]
+}
+
+model SurgerySStaff {
+  surgeryId String @id
+  staffId   String
+  role      String
+
+  surgery Surgery      @relation(fields: [surgeryId], references: [id], onDelete: SetNull)
+  staff   StaffProfile @relation(fields: [staffId], references: [id], onDelete: SetNull)
 }
 
 model SurgicalChecklist {
@@ -473,9 +526,9 @@ model ServiceOrder {
   orderType          OrderType
   priority           OrderPriority
   clinicalIndication String?
-
-  status    OrderStatus
-  orderDate DateTime    @default(now())
+  isPaid             Boolean       @default(false)
+  status             OrderStatus
+  orderDate          DateTime      @default(now())
 
   // Relations
   patient   Patient      @relation(fields: [patientId], references: [id])
@@ -519,6 +572,7 @@ model Prescription {
   doctorId    String
   visitId     String?
   admissionId String?
+  isPaid      Boolean  @default(false)
   date        DateTime @default(now())
 
   // Relations

@@ -167,8 +167,7 @@ model User {
 }
 
 model StaffProfile {
-  id                 String  @id @default(uuid())
-  userId             String  @unique
+  id                 String  @id
   departmentId       String?
   fullName           String
   qualification      String?
@@ -177,7 +176,7 @@ model StaffProfile {
   shiftTiming        String?
 
   // Relations
-  user       User        @relation(fields: [userId], references: [id])
+  user       User        @relation(fields: [id], references: [id])
   department Department? @relation(fields: [departmentId], references: [id])
 
   // "Doctor" Relationships
@@ -250,8 +249,8 @@ model Bed {
   // Relations
   ward      Ward          @relation(fields: [wardId], references: [id])
   transfers BedTransfer[]
+  activeAdmissions Admission[] @relation("CurrentBed")
 }
-
 // ==========================================
 // 4. PATIENT CORE
 // ==========================================
@@ -265,7 +264,7 @@ model Patient {
   lastName   String
 
   dob           DateTime @db.Date
-  gender        Gender
+  gender        String?
   maritalStatus String?
   nationality   String?
 
@@ -307,18 +306,18 @@ model Patient {
   invoices       Invoice[]
 }
 
-model AdmissionAttendant {
-  id           String    @id @default(uuid())
-  admissionId  String
-  name         String
-  relationship String
-  phone        String
-  address      String?
-  idProofType  String?
-  idProofNo    String?
-  isPrimary    Boolean   @default(true)
-  admission    Admission @relation(fields: [admissionId], references: [id])
-}
+// model AdmissionAttendant {
+//   id           String    @id @default(uuid())
+//   admissionId  String
+//   name         String
+//   relationship String
+//   phone        String
+//   address      String?
+//   idProofType  String?
+//   idProofNo    String?
+//   isPrimary    Boolean   @default(true)
+//   admission    Admission @relation(fields: [admissionId], references: [id])
+// }
 
 // ==========================================
 // 5. MEDICAL HISTORY & DOCS
@@ -372,31 +371,33 @@ model Appointment {
   patient    Patient      @relation(fields: [patientId], references: [id])
   doctor     StaffProfile @relation(fields: [doctorId], references: [id])
   department Department   @relation(fields: [departmentId], references: [id])
+  
   opdVisit   OpdVisit? // 1:1 Relation
 }
 
 model OpdVisit {
-  id            String   @id @default(uuid())
-  appointmentId String?  @unique // Nullable for Emergency
+  id            String      @id @default(uuid())
+  appointmentId String?     @unique // Nullable for Emergency
   patientId     String
   doctorId      String
-  visitDate     DateTime @default(now())
-
+  visitDate     DateTime    @default(now())
+  
   visitType     VisitType
   triageColor   TriageColor?
   status        VisitStatus
-  isMedicoLegal Boolean      @default(false)
+  isMedicoLegal Boolean     @default(false)
 
   // Relations
-  appointment Appointment? @relation(fields: [appointmentId], references: [id])
-  patient     Patient      @relation(fields: [patientId], references: [id])
-  doctor      StaffProfile @relation(fields: [doctorId], references: [id])
-
+  appointment   Appointment?      @relation(fields: [appointmentId], references: [id])
+  patient       Patient           @relation(fields: [patientId], references: [id])
+  doctor        StaffProfile      @relation(fields: [doctorId], references: [id])
+  
   clinicalNotes ClinicalNote[]
   serviceOrders ServiceOrder[]
   prescriptions Prescription[]
   documents     PatientDocument[]
   invoices      Invoice[]
+  admission     Admission? // Inverse relation
 }
 
 // ==========================================
@@ -404,34 +405,38 @@ model OpdVisit {
 // ==========================================
 
 model Admission {
-  id                 String    @id @default(uuid())
-  patientId          String
-  admittingDoctorId  String
-  departmentId       String
-  admissionDate      DateTime  @default(now())
-  dischargeDate      DateTime?
+  id                String          @id @default(uuid())
+  patientId         String
+  admittingDoctorId String
+  departmentId      String
+  visitId           String?         @unique // Link to source OPD visit (e.g. Emergency admission)
+  currentBedId      String?         // Direct link to currently occupied bed
+  admissionDate     DateTime        @default(now())
+  dischargeDate     DateTime?
   reasonForAdmission String?
 
-  admissionType AdmissionType
-  status        AdmissionStatus
-  dischargeType DischargeType?
-  mlc           Boolean         @default(false)
+  admissionType     AdmissionType
+  status            AdmissionStatus
+  dischargeType     DischargeType?
+  mlc               Boolean         @default(false)
 
   // Relations
-  patient         Patient      @relation(fields: [patientId], references: [id])
-  admittingDoctor StaffProfile @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
-  department      Department   @relation(fields: [departmentId], references: [id])
-
-  bedTransfers        BedTransfer[]
-  surgeries           Surgery[]
-  clinicalNotes       ClinicalNote[]
-  serviceOrders       ServiceOrder[]
-  prescriptions       Prescription[]
-  documents           PatientDocument[]
-  invoices            Invoice[]
-  insuranceClaims     InsuranceClaim[]
-  admissionAttendants AdmissionAttendant[]
+  patient           Patient           @relation(fields: [patientId], references: [id])
+  admittingDoctor   StaffProfile      @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
+  department        Department        @relation(fields: [departmentId], references: [id])
+  visit             OpdVisit?         @relation(fields: [visitId], references: [id])
+  currentBed        Bed?              @relation("CurrentBed", fields: [currentBedId], references: [id])
+  
+  bedTransfers      BedTransfer[]
+  surgeries         Surgery[]
+  clinicalNotes     ClinicalNote[]
+  serviceOrders     ServiceOrder[]
+  prescriptions     Prescription[]
+  documents         PatientDocument[]
+  invoices          Invoice[]
+  insuranceClaims   InsuranceClaim[]
 }
+
 
 model BedTransfer {
   id          String    @id @default(uuid())

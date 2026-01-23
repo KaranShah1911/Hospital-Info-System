@@ -14,6 +14,7 @@ import billingRoutes from './routes/billingRoutes.js';
 import generalRoutes from './routes/generalRoutes.js';
 import facilityRoutes from './routes/facilityRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
+import ipdRoutes from './routes/ipdRoutes.js';
 import cookieParser from 'cookie-parser';
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/billing', billingRoutes);
 app.use('/general', generalRoutes);
 app.use('/facility', facilityRoutes);
 app.use('/appointments', appointmentRoutes);
+app.use('/ipd', ipdRoutes);
 
 const PORT = process.env.PORT || 3000;
 
