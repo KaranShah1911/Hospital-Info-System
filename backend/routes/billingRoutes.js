@@ -1,15 +1,19 @@
-import express from 'express';
-import { getActiveBill, finalizeBill , generateInvoiceForServiceOrder, generateInvoiceForPrescription } from '../controllers/billingController.js';
+import { Router } from 'express';
+import { 
+    getActiveBill, 
+    finalizeBill, 
+    generateInvoiceForServiceOrder, 
+    generateInvoiceForPrescription 
+} from '../controllers/billingController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/active/:visitId', authenticateToken, getActiveBill);
-router.post('/finalize', authenticateToken, authorizeRoles('Admin', 'Receptionist'), finalizeBill);
-
-
-// Ritesh Routes : 
-router.post('/invoices/service-order', authenticateToken, authorizeRoles('Receptionist'),generateInvoiceForServiceOrder);
-router.post('/invoices/prescription', authenticateToken, authorizeRoles('Receptionist'), generateInvoiceForPrescription);
+router.get('/visits/:visitId', authenticateToken, authorizeRoles('Receptionist', 'Admin'), getActiveBill);
+router.post('/finalize', authenticateToken, authorizeRoles('Receptionist', 'Admin'), finalizeBill);
+router.post('/invoices/service-order', authenticateToken, authorizeRoles('Receptionist', 'Admin'), generateInvoiceForServiceOrder);
+router.post('/invoices/prescription', authenticateToken, authorizeRoles('Receptionist', 'Admin'), generateInvoiceForPrescription);
 
 export default router;
+
+// meet mai aaya vapas toh call kr
