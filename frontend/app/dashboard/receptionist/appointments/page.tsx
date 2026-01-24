@@ -15,8 +15,10 @@ export default function AppointmentsPage() {
         setLoading(true);
         try {
             // Fetch today's appointments by default
-            // You might want to add date filtering UI later
-            const res = await api.get(`/appointments?date=${new Date().toISOString()}`);
+            const d = new Date();
+            const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const res = await api.get(`/appointments?date=${dateString}`);
+            console.log(res)
             setAppointments(res.data.data || []);
         } catch (error) {
             console.error(error);

@@ -22,27 +22,32 @@ export default function ConsultationPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    const fetchDetails = async () => {
+        if (!id) return;
+        try {
+            const res = await api.get(`/appointments/${id}/details`);
+            setData(res.data.data);
+        } catch (error) {
+            console.error("Failed to load consultation", error);
+            toast.error("Could not load consultation details");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchDetails = async () => {
-            if (!id) return;
-            try {
-                const res = await api.get(`/appointments/${id}/details`);
-                setData(res.data.data);
-            } catch (error) {
-                console.error("Failed to load consultation", error);
-                toast.error("Could not load consultation details");
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchDetails();
     }, [id]);
 
-    const handleFinish = () => {
-        // Implementation for saving data would go here (Likely trigger submit on child forms or use a context)
-        // For now, simple success toast
-        toast.success("Consultation Completed & Signed Successfully!");
-        router.push('/dashboard/doctor/appointments');
+    const handleFinish = async () => {
+        try {
+            await api.post(`/appointments/${id}/complete`);
+            toast.success("Consultation Completed & Signed Successfully!");
+            router.push('/dashboard/doctor/appointments');
+        } catch (error) {
+            toast.error("Failed to complete consultation");
+            console.error(error);
+        }
     };
 
     if (loading) return <div className="p-12 text-center text-slate-400 font-bold">Loading consultation room...</div>;
@@ -84,17 +89,34 @@ export default function ConsultationPage() {
                             {
                                 id: 'note',
                                 label: 'Clinical Note',
-                                content: <ClinicalNoteForm /> // pass visitId if available later
+                                content: <ClinicalNoteForm
+                                    savedNotes={data.currentVisit?.notes || []}
+                                    patientId={data.patient.id}
+                                    visitId={data.visitId}
+                                    onSuccess={fetchDetails}
+                                />
                             },
                             {
                                 id: 'rx',
                                 label: 'Prescription (Rx)',
-                                content: <PrescriptionForm />
+                                content: <PrescriptionForm
+                                    savedPrescriptions={data.currentVisit?.prescriptions || []}
+                                    patientId={data.patient.id} // Pass explicit patientId
+                                    visitId={data.visitId}      // Pass explicit visitId
+                                    onSuccess={fetchDetails}    // Callback to refresh
+                                />
                             },
                             {
                                 id: 'labs',
                                 label: 'Lab & Radiology',
-                                content: <LabOrderForm />
+                                content: <LabOrderForm
+                                    savedOrders={data.currentVisit?.serviceOrders || []}
+                                    patientId={data.patient.id}
+                                    visitId={data.visitId}
+                                    onSuccess={fetchDetails}
+                                />
+
+
                             }
                         ]} />
                     </div>

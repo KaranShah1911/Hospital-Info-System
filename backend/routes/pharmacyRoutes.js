@@ -22,6 +22,9 @@ router.post('/prescriptions', authenticateToken, authorizeRoles('Doctor'), creat
 // Get list of medicines
 router.get('/medicines', authenticateToken, getMedicines);
 
+// Get Prescription by ID or UHID
+router.get('/prescriptions/:id', authenticateToken, getPrescriptionById);
+
 
 export default router;
 

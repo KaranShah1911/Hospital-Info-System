@@ -128,12 +128,12 @@ export const SIDEBAR_LINKS = {
         { label: 'In-Patient (IPD)', href: '/dashboard/doctor/ipd', icon: Activity },
         { label: 'Surgery (OT)', href: '/dashboard/doctor/surgery', icon: Scissors },
     ],
-   [UserRole.OTManager]: [
+    [UserRole.OTManager]: [
         { label: 'Emergency Requests', href: '/dashboard/ot/requests', icon: ShieldAlert },
         { label: 'OT Schedule', href: '/dashboard/ot/schedule', icon: Calendar },
-   ],
+    ],
 
-   
+
     [UserRole.Admin]: [
         { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
         { label: 'Analytics', href: '/dashboard/admin/analytics', icon: Activity },

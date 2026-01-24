@@ -11,10 +11,11 @@ export function AppointmentBookingForm() {
     const [doctors, setDoctors] = useState<any[]>([]);
 
     const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+    const [patientSuggestions, setPatientSuggestions] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         departmentId: '',
         doctorId: '',
-        appointmentDate: new Date().toISOString().split('T')[0],
+        appointmentDate: new Date().toLocaleDateString('en-CA'),
         timeSlot: '09:00', // Basic time slot for now
         type: AppointmentType.New
     });
@@ -120,23 +121,65 @@ export function AppointmentBookingForm() {
             </div>
 
             {/* Patient Search */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Find Patient (Enter UHID)</label>
                 <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                         type="text"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={handleSearch}
-                        placeholder="Search Patient (Press Enter)..."
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            // Debounce logic handled by effect or simple enough here?
+                            // Let's call search directly here for simplicity or use a debounced effect usually.
+                            // Given constraints, I'll add a simple inline check or effect.
+                            if (e.target.value.length > 2) {
+                                api.get(`/patients/search?uhid=${e.target.value}`)
+                                    .then(res => setPatientSuggestions(Array.isArray(res.data) ? res.data : [res.data]))
+                                    .catch(() => setPatientSuggestions([]));
+                            } else {
+                                setPatientSuggestions([]);
+                            }
+                        }}
+                        placeholder="Type P-202X... to search"
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
                     />
                 </div>
+
+                {/* Autocomplete Dropdown */}
+                {patientSuggestions.length > 0 && !selectedPatient && (
+                    <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto">
+                        {patientSuggestions.map((p: any) => (
+                            <div
+                                key={p.id}
+                                onClick={() => {
+                                    setSelectedPatient(p);
+                                    setSearchTerm(p.uhid);
+                                    setPatientSuggestions([]);
+                                    toast.success(`Selected: ${p.firstName}`);
+                                }}
+                                className="p-3 hover:bg-indigo-50 cursor-pointer border-b last:border-b-0"
+                            >
+                                <p className="font-bold text-sm text-slate-800">{p.firstName} {p.lastName}</p>
+                                <p className="text-xs text-slate-500 font-mono">{p.uhid} • {p.phone}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {selectedPatient && (
-                    <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        {selectedPatient.firstName} {selectedPatient.lastName} ({selectedPatient.uhid})
+                    <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            {selectedPatient.firstName} {selectedPatient.lastName} ({selectedPatient.uhid})
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => { setSelectedPatient(null); setSearchTerm(''); }}
+                            className="text-emerald-800 hover:text-red-500"
+                        >
+                            Change
+                        </button>
                     </div>
                 )}
             </div>

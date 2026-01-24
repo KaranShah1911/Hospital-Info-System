@@ -184,6 +184,20 @@ export const getConsultationDetails = async (req, res) => {
       throw new ApiError(404, "Appointment not found");
     }
 
+    // Find Current Visit linked to this Appointment
+    const currentVisit = await prisma.opdVisit.findFirst({
+        where: { appointmentId: id },
+        include: {
+            prescriptions: {
+                include: { items: { include: { medicine: true } } }
+            },
+            serviceOrders: {
+                include: { service: true }
+            },
+            clinicalNotes: true
+        }
+    });
+
     // Format for frontend
     const patient = appointment.patient;
     // const lastVital = patient.admissions[0]?.patientVitals[0]; // Commented out
@@ -192,6 +206,8 @@ export const getConsultationDetails = async (req, res) => {
       id: appointment.id,
       tokenNumber: appointment.tokenNumber,
       status: appointment.status,
+      // Pass the visit ID for forms to use directly!
+      visitId: currentVisit?.id || null, 
       patient: {
         id: patient.id,
         uhid: patient.uhid,
@@ -199,15 +215,20 @@ export const getConsultationDetails = async (req, res) => {
         lastName: patient.lastName,
         age: patient.dob ? new Date().getFullYear() - new Date(patient.dob).getFullYear() : 'N/A',
         gender: patient.gender,
-        bloodGroup: 'O+', // Add to schema if missing
+        bloodGroup: 'O+', 
         allergies: patient.medicalHistory.filter(h => h.category === 'Allergy').map(h => h.name),
         conditions: patient.medicalHistory.filter(h => h.category !== 'Allergy').map(h => h.name),
-        vitals: { bp: '120/80', pulse: 72, temp: 98.6, spo2: 98 } // Default / Mock if no recent vitals
+        vitals: { bp: '120/80', pulse: 72, temp: 98.6, spo2: 98 }
       },
-      history: patient.opdVisits.map(v => ({
+      currentVisit: currentVisit ? {
+          prescriptions: currentVisit.prescriptions,
+          serviceOrders: currentVisit.serviceOrders,
+          notes: currentVisit.clinicalNotes
+      } : null,
+      history: patient.opdVisits.filter(v => v.id !== currentVisit?.id).map(v => ({ // Exclude current from history list if desired, or keep
         date: v.visitDate,
         diagnosis: v.clinicalNotes[0]?.content?.diagnosis || "Routine Checkup",
-        doctor: "Dr. Previous" // Simplify for now
+        doctor: "Dr. Previous" 
       }))
     };
 
@@ -217,4 +238,40 @@ export const getConsultationDetails = async (req, res) => {
     console.error("Consultation Details Error:", error);
     res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
   }
+};
+
+
+// Handles Marking Consultation/Appointment as Completed
+// Logic: Updates both Appointment and linked OpdVisit status to 'Completed'
+export const completeConsultation = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const appointment = await prisma.appointment.findUnique({
+            where: { id }
+        });
+
+        if (!appointment) throw new ApiError(404, "Appointment not found");
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Update Appointment Status
+            await tx.appointment.update({
+                where: { id },
+                data: { status: 'Completed' }
+            });
+
+            // 2. Update Linked OpdVisit (if it exists)
+            // Note: In emergency or direct OPD cases, might need to find by other means, but here we expect appointmentId link
+            await tx.opdVisit.updateMany({
+                where: { appointmentId: id },
+                data: { status: 'Completed' }
+            });
+        });
+
+        res.status(200).json(new ApiResponse(200, null, "Consultation marked as completed"));
+
+    } catch (error) {
+        console.error("Complete Consultation Error:", error);
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
 };

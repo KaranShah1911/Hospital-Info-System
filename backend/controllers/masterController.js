@@ -37,11 +37,16 @@ export const createService = async (req, res) => {
 
 export const getServices = async (req, res) => {
     try {
-        const { category } = req.query;
-        const where = category ? { category } : {};
+        const { category, search } = req.query;
+        let where = {};
+        
+        if (category) where.category = category;
+        if (search) where.name = { contains: search, mode: 'insensitive' };
+
         const services = await prisma.service.findMany({
             where,
-            include: { department: true }
+            include: { department: true },
+            take: 50
         });
         res.json(services);
     } catch (error) {

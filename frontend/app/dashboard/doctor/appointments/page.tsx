@@ -29,9 +29,10 @@ export default function DoctorAppointments() {
     }, []);
 
     const filtered = appointments.filter((a: any) =>
-    (a.patient?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.patient?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.patient?.uhid?.includes(searchTerm))
+        a.status !== 'Completed' &&
+        (a.patient?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            a.patient?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            a.patient?.uhid?.includes(searchTerm))
     );
 
     return (

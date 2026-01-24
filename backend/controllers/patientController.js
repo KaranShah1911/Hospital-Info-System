@@ -71,20 +71,46 @@ export const registerPatient = async (req, res) => {
 export const searchPatient = async (req, res) => {
     try {
         const { uhid, phone } = req.query;
-        let where = {};
-        if (uhid) where.uhid = uhid;
-        else if (phone) where.phone = phone;
-        else return res.status(400).json({ error: "Provide uhid or phone" });
+        let patients = [];
 
-        const patient = await prisma.patient.findFirst({
-            where,
-            include: {
-                opdVisits: { take: 5, orderBy: { visitDate: 'desc' } }
-            }
-        });
+        if (uhid) {
+            // Partial match for Autocomplete
+            patients = await prisma.patient.findMany({
+                where: { 
+                    uhid: { contains: uhid, mode: 'insensitive' } // or startsWith
+                },
+                take: 10,
+                orderBy: { uhid: 'asc' },
+                include: {
+                     opdVisits: { take: 1, orderBy: { visitDate: 'desc' } }
+                }
+            });
+        }
+        else if (phone) {
+            // Phone exact match (usually unique)
+            const patient = await prisma.patient.findFirst({
+                where: { phone },
+                include: {
+                    opdVisits: { take: 1, orderBy: { visitDate: 'desc' } }
+                }
+            });
+            if (patient) patients.push(patient);
+        }
+        else {
+            return res.status(400).json({ error: "Provide uhid or phone" });
+        }
 
-        if (!patient) return res.status(404).json({ message: "Patient not found" });
-        res.json(patient);
+        if (patients.length === 0) return res.status(404).json({ message: "No patients found" });
+        
+        // Return list for autocomplete, or single object if strict check needed?
+        // Frontend expects list now? Let's return list always for search?
+        // Wait, existing code might expect object if exact match.
+        // Let's standardise: always return array, frontend adapts, 
+        // OR: detect if it's a "search list" request.
+        // For backwards compatibility with single result pages (if any), 
+        // I will return JSON structure: { results: [...] } or just [...]
+        
+        res.json(patients); 
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
