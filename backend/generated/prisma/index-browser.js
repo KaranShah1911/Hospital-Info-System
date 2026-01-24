@@ -292,6 +292,15 @@ exports.Prisma.SurgerySStaffScalarFieldEnum = {
   role: 'role'
 };
 
+exports.Prisma.SurgeryTeamMemberScalarFieldEnum = {
+  id: 'id',
+  surgeryId: 'surgeryId',
+  staffId: 'staffId',
+  role: 'role',
+  startTime: 'startTime',
+  endTime: 'endTime'
+};
+
 exports.Prisma.SurgicalChecklistScalarFieldEnum = {
   id: 'id',
   surgeryId: 'surgeryId',
@@ -327,6 +336,31 @@ exports.Prisma.ServiceOrderScalarFieldEnum = {
   isPaid: 'isPaid',
   status: 'status',
   orderDate: 'orderDate'
+};
+
+exports.Prisma.CarePlanScalarFieldEnum = {
+  id: 'id',
+  admissionId: 'admissionId',
+  doctorId: 'doctorId',
+  vitalsFrequency: 'vitalsFrequency',
+  vitalInstructions: 'vitalInstructions',
+  dietType: 'dietType',
+  dietNotes: 'dietNotes',
+  activityLevel: 'activityLevel',
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.NursingTaskScalarFieldEnum = {
+  id: 'id',
+  admissionId: 'admissionId',
+  nurseId: 'nurseId',
+  taskName: 'taskName',
+  taskType: 'taskType',
+  scheduledFor: 'scheduledFor',
+  status: 'status',
+  executedAt: 'executedAt',
+  resultValue: 'resultValue'
 };
 
 exports.Prisma.LabResultScalarFieldEnum = {
@@ -424,6 +458,21 @@ exports.Prisma.InsuranceClaimScalarFieldEnum = {
   submissionDate: 'submissionDate'
 };
 
+exports.Prisma.PatientVitalScalarFieldEnum = {
+  id: 'id',
+  admissionId: 'admissionId',
+  nurseId: 'nurseId',
+  recordedAt: 'recordedAt',
+  temperature: 'temperature',
+  pulse: 'pulse',
+  systolicBP: 'systolicBP',
+  diastolicBP: 'diastolicBP',
+  respRate: 'respRate',
+  spO2: 'spO2',
+  painScore: 'painScore',
+  notes: 'notes'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -454,7 +503,8 @@ exports.UserRole = exports.$Enums.UserRole = {
   Nurse: 'Nurse',
   Receptionist: 'Receptionist',
   Pharmacist: 'Pharmacist',
-  LabTech: 'LabTech'
+  LabTech: 'LabTech',
+  OTManager: 'OTManager'
 };
 
 exports.DepartmentType = exports.$Enums.DepartmentType = {
@@ -535,6 +585,15 @@ exports.SurgeryStatus = exports.$Enums.SurgeryStatus = {
   Completed: 'Completed'
 };
 
+exports.SurgeryRole = exports.$Enums.SurgeryRole = {
+  LeadSurgeon: 'LeadSurgeon',
+  AssistantSurgeon: 'AssistantSurgeon',
+  Anesthetist: 'Anesthetist',
+  ScrubNurse: 'ScrubNurse',
+  CirculatingNurse: 'CirculatingNurse',
+  Technician: 'Technician'
+};
+
 exports.ChecklistStage = exports.$Enums.ChecklistStage = {
   Sign_In: 'Sign_In',
   Time_Out: 'Time_Out',
@@ -566,6 +625,12 @@ exports.OrderStatus = exports.$Enums.OrderStatus = {
   Completed: 'Completed'
 };
 
+exports.TaskStatus = exports.$Enums.TaskStatus = {
+  Pending: 'Pending',
+  Completed: 'Completed',
+  Skipped: 'Skipped'
+};
+
 exports.InvoiceStatus = exports.$Enums.InvoiceStatus = {
   Draft: 'Draft',
   Finalized: 'Finalized',
@@ -595,9 +660,12 @@ exports.Prisma.ModelName = {
   BedTransfer: 'BedTransfer',
   Surgery: 'Surgery',
   SurgerySStaff: 'SurgerySStaff',
+  SurgeryTeamMember: 'SurgeryTeamMember',
   SurgicalChecklist: 'SurgicalChecklist',
   ClinicalNote: 'ClinicalNote',
   ServiceOrder: 'ServiceOrder',
+  CarePlan: 'CarePlan',
+  NursingTask: 'NursingTask',
   LabResult: 'LabResult',
   Prescription: 'Prescription',
   PrescriptionItem: 'PrescriptionItem',
@@ -606,7 +674,8 @@ exports.Prisma.ModelName = {
   SaleItem: 'SaleItem',
   Invoice: 'Invoice',
   InvoiceItem: 'InvoiceItem',
-  InsuranceClaim: 'InsuranceClaim'
+  InsuranceClaim: 'InsuranceClaim',
+  PatientVital: 'PatientVital'
 };
 
 /**

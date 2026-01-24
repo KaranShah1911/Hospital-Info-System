@@ -75,31 +75,31 @@ export const getInventory = async (req, res) => {
 // Handles Creating Prescription - Track 1 Step 3 (Doctor Side)
 // Logic: Creates a prescription with nested prescription items.
 export const createPrescription = async (req, res) => {
-  try {
-    const { patientId, visitId, items } = req.body;
-    // items = [{ medicineId, dosage, frequency, duration, instruction }, ...]
+    try {
+        const { patientId, visitId, items } = req.body;
+        // items = [{ medicineId, dosage, frequency, duration, instruction }, ...]
 
-    const prescription = await prisma.prescription.create({
-        data: {
-            patientId,
-            doctorId: req.user.userId,
-            visitId,
-            items: {
-                create: items.map(item => ({
-                    medicineId: item.medicineId,
-                    dosage: item.dosage,
-                    frequency: item.frequency,
-                    duration: item.duration,
-                    instruction: item.instruction
-                }))
+        const prescription = await prisma.prescription.create({
+            data: {
+                patientId,
+                doctorId: req.user.userId,
+                visitId,
+                items: {
+                    create: items.map(item => ({
+                        medicineId: item.medicineId,
+                        dosage: item.dosage,
+                        frequency: item.frequency,
+                        duration: item.duration,
+                        instruction: item.instruction
+                    }))
+                }
             }
-        }
-    });
+        });
 
-    res.status(201).json(new ApiResponse(201, prescription, "Prescription created"));
-  } catch (error) {
-    res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
-  }
+        res.status(201).json(new ApiResponse(201, prescription, "Prescription created"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
 };
 
 // Handles Pharmacy Sale & Inventory Deduction - Track 1 Step 2 (Pharm Side)
@@ -109,7 +109,7 @@ export const createPrescription = async (req, res) => {
 //     try {
 //         const { patientId, prescriptionId, items } = req.body;
 //         // items = [{ medicineId, quantity, unitPrice }]
-        
+
 //         // Calculate total amount
 //         const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
@@ -169,7 +169,7 @@ export const getMedicines = async (req, res) => {
         if (search) {
             where.name = { contains: search, mode: 'insensitive' };
         }
-        
+
         const medicines = await prisma.medicine.findMany({ where, take: 50 });
         res.status(200).json(new ApiResponse(200, medicines, "Medicines list"));
     } catch (error) {
@@ -179,26 +179,67 @@ export const getMedicines = async (req, res) => {
 
 export const getPrescriptionById = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // Can be UUID or UHID
 
-        const prescription = await prisma.prescription.findUnique({
-            where: { id },
-            include: {
-                patient: {
-                    select: { firstName: true, lastName: true, uhid: true }
-                },
-                doctor: {
-                    select: { fullName: true }
-                },
-                items: {
-                    include: {
-                        medicine: {
-                            select: { name: true, unitPrice: true, stockQuantity: true }
+        let prescription = null;
+
+        // Check if input is a UHID (Starts with 'P-')
+        if (id.startsWith('P-')) {
+            // 1. Find Patient
+            const patient = await prisma.patient.findUnique({
+                where: { uhid: id }
+            });
+
+            if (!patient) {
+                throw new ApiError(404, "Patient with this UHID not found");
+            }
+
+            // 2. Find Latest Prescription
+            prescription = await prisma.prescription.findFirst({
+                where: { patientId: patient.id },
+                orderBy: { date: 'desc' }, // Latest first
+                include: {
+                    patient: {
+                        select: { firstName: true, lastName: true, uhid: true }
+                    },
+                    doctor: {
+                        select: { fullName: true }
+                    },
+                    items: {
+                        include: {
+                            medicine: {
+                                select: { name: true, unitPrice: true, stockQuantity: true }
+                            }
                         }
                     }
                 }
+            });
+
+            if (!prescription) {
+                throw new ApiError(404, "No prescriptions found for this patient");
             }
-        });
+
+        } else {
+            // Assume it's a UUID (Prescription ID)
+            prescription = await prisma.prescription.findUnique({
+                where: { id },
+                include: {
+                    patient: {
+                        select: { firstName: true, lastName: true, uhid: true }
+                    },
+                    doctor: {
+                        select: { fullName: true }
+                    },
+                    items: {
+                        include: {
+                            medicine: {
+                                select: { name: true, unitPrice: true, stockQuantity: true }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         if (!prescription) {
             throw new ApiError(404, "Prescription not found");

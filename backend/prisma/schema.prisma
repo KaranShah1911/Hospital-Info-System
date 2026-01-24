@@ -18,6 +18,15 @@ enum UserRole {
   Receptionist
   Pharmacist
   LabTech
+  OTManager
+}
+enum SurgeryRole {
+  LeadSurgeon
+  AssistantSurgeon
+  Anesthetist
+  ScrubNurse
+  CirculatingNurse
+  Technician
 }
 
 enum DepartmentType {
@@ -148,6 +157,12 @@ enum ClaimStatus {
   Rejected
 }
 
+enum TaskStatus {
+  Pending
+  Completed
+  Skipped
+}
+
 // ==========================================
 // 2. AUTH & STAFF
 // ==========================================
@@ -190,6 +205,10 @@ model StaffProfile {
   verifiedResults   LabResult[]     @relation("ResultVerifier")
   prescriptions     Prescription[]
   surgerySStaffs    SurgerySStaff[]
+  createdCarePlans CarePlan[]
+  nursingTasks     NursingTask[]
+  surgeryParticipations SurgeryTeamMember[]
+  vitalsRecorded   PatientVital[]
 }
 
 // ==========================================
@@ -435,6 +454,9 @@ model Admission {
   documents         PatientDocument[]
   invoices          Invoice[]
   insuranceClaims   InsuranceClaim[]
+  carePlans       CarePlan[]
+  nursingTasks    NursingTask[]
+  patientVitals  PatientVital[] 
 }
 
 
@@ -466,6 +488,7 @@ model Surgery {
   surgeon        StaffProfile        @relation("Surgeon", fields: [surgeonId], references: [id])
   checklists     SurgicalChecklist[]
   surgerySStaffs SurgerySStaff[]
+  teamMembers SurgeryTeamMember[]
 }
 
 model SurgerySStaff {
@@ -475,6 +498,21 @@ model SurgerySStaff {
 
   surgery Surgery      @relation(fields: [surgeryId], references: [id], onDelete: SetNull)
   staff   StaffProfile @relation(fields: [staffId], references: [id], onDelete: SetNull)
+}
+
+model SurgeryTeamMember {
+  id        String      @id @default(uuid())
+  surgeryId String
+  staffId   String
+  role      SurgeryRole
+  
+  // Optional: distinct times if they swapped shifts during a long surgery
+  startTime DateTime?   
+  endTime   DateTime?   
+
+  // Relations
+  surgery   Surgery      @relation(fields: [surgeryId], references: [id])
+  staff     StaffProfile @relation(fields: [staffId], references: [id])
 }
 
 model SurgicalChecklist {
@@ -539,6 +577,50 @@ model ServiceOrder {
 
   labResults   LabResult[]
   invoiceItems InvoiceItem[] // Links order to billing
+}
+
+// ADD THIS TO YOUR SCHEMA
+
+model CarePlan {
+  id           String   @id @default(uuid())
+  admissionId  String
+  doctorId     String
+  
+  // 1. Vitals Schedule
+  vitalsFrequency String // e.g., "Q4H" (Every 4 hours), "BID" (Twice a day)
+  vitalInstructions String? // e.g., "Wake patient if BP < 90/60"
+
+  // 2. Diet Orders
+  dietType     String   // e.g., "Normal", "Soft", "Diabetic", "NBM"
+  dietNotes    String?
+
+  // 3. Activity
+  activityLevel String? // e.g., "Bed Rest", "Ambulatory", "Bathroom Privileges"
+
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  // Relations
+  admission    Admission    @relation(fields: [admissionId], references: [id])
+  doctor       StaffProfile @relation(fields: [doctorId], references: [id])
+}
+
+model NursingTask {
+  id           String     @id @default(uuid())
+  admissionId  String
+  nurseId      String?    // Who performed it?
+  
+  taskName     String     // e.g., "Check BP", "Give Insulin"
+  taskType     String     // "Vitals", "Medication", "General"
+  scheduledFor DateTime   // When is it due? (e.g., 2026-01-23 14:00:00)
+  
+  status       TaskStatus @default(Pending)
+  executedAt   DateTime?  // When was it actually done?
+  resultValue  String?    // e.g., "120/80" for BP, or "Taken" for meds
+  
+  // Relations
+  admission    Admission    @relation(fields: [admissionId], references: [id])
+  nurse        StaffProfile?        @relation(fields: [nurseId], references: [id])
 }
 
 // ==========================================
@@ -691,4 +773,28 @@ model InsuranceClaim {
 
   // Relations
   admission Admission @relation(fields: [admissionId], references: [id])
+}
+
+// Add this new model for structured Vitals data
+model PatientVital {
+  id          String   @id @default(uuid())
+  admissionId String
+  nurseId     String   // The User/Staff who took the reading
+  
+  recordedAt  DateTime @default(now())
+  
+  // The Core Vitals
+  temperature Decimal? @db.Decimal(5, 2) // e.g., 98.6
+  pulse       Int?     // e.g., 72
+  systolicBP  Int?     // e.g., 120
+  diastolicBP Int?     // e.g., 80
+  respRate    Int?     // e.g., 18
+  spO2        Int?     // e.g., 99
+  
+  painScore   Int?     // 1-10 scale
+  notes       String?  // Nurse's observation
+
+  // Relations
+  admission   Admission @relation(fields: [admissionId], references: [id])
+  nurse       StaffProfile      @relation(fields: [nurseId], references: [id])
 }

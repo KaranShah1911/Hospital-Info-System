@@ -5,104 +5,316 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Get Active Bill Details
 // Logic: Fetches all UNPAID ServiceOrders and Prescriptions for a specific Visit.
 // Calculates the total estimated bill.
+
 export const getActiveBill = async (req, res) => {
-    try {
-        const { visitId } = req.params;
+  try {
+    const { visitId, admissionId } = req.query;
 
-        // 1. Fetch Visit to ensure it exists
-        const visit = await prisma.opdVisit.findUnique({ where: { id: visitId } });
-        if (!visit) throw new ApiError(404, "Visit not found");
-
-        // 2. Fetch Unpaid Service Orders
-        const unpaidServiceOrders = await prisma.serviceOrder.findMany({
-            where: {
-                visitId,
-                isPaid: false,
-                status: { not: 'Cancelled' } // Assuming we have Cancelled? Schema says Completed/Ordered etc.
-                // Status enum: Ordered, SampleCollected, ResultAvailable, Completed.
-                // We bill regardless of status unless explicitly rejected? usually bill on order.
-            },
-            include: { service: true }
-        });
-
-        // 3. Fetch Unpaid Prescriptions
-        const unpaidPrescriptions = await prisma.prescription.findMany({
-            where: {
-                visitId,
-                isPaid: false
-            },
-            include: {
-                items: {
-                    include: { medicine: true }
-                }
-            }
-        });
-
-        // 4. Calculate Totals
-        // Service Orders
-        let serviceTotal = 0;
-        const serviceItems = unpaidServiceOrders.map(order => {
-            const amount = Number(order.service.basePrice);
-            serviceTotal += amount;
-            return {
-                type: 'Service',
-                id: order.id,
-                name: order.service.name,
-                amount
-            };
-        });
-
-        // Prescriptions
-        let pharmacyTotal = 0;
-        const prescriptionItems = unpaidPrescriptions.map(pres => {
-            let presSum = 0;
-            const details = pres.items.map(item => {
-                // Assuming quantity 1 if not defined, usually prescription item has strict dosage. 
-                // But for billing we need unit count. Logic: if pharmacy sale handles it, precision is there.
-                // Here we estimate.
-                const price = Number(item.medicine.unitPrice);
-                presSum += price;
-                return {
-                    medicine: item.medicine.name,
-                    price
-                };
-            });
-            pharmacyTotal += presSum;
-            return {
-                type: 'Prescription',
-                id: pres.id,
-                name: `Prescription on ${new Date(pres.date).toLocaleDateString()}`,
-                amount: presSum,
-                details
-            };
-        });
-
-        // 5. Check for any existing Draft Invoice (Legacy support if mixed)
-        const draftInvoice = await prisma.invoice.findFirst({
-            where: { visitId, status: 'Draft' },
-            include: { items: true }
-        });
-        const draftTotal = draftInvoice ? Number(draftInvoice.totalAmount) : 0;
-
-        const grandTotal = serviceTotal + pharmacyTotal + draftTotal;
-
-        res.status(200).json(new ApiResponse(200, {
-            visitId,
-            serviceItems,
-            prescriptionItems,
-            draftInvoice,
-            summary: {
-                serviceTotal,
-                pharmacyTotal,
-                draftTotal,
-                grandTotal
-            }
-        }, "Active bill details fetched"));
-
-    } catch (error) {
-        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    if (!visitId && !admissionId) {
+      throw new ApiError(400, "Either visitId or admissionId is required");
     }
+
+    let visit = null;
+    let admission = null;
+
+    // ============================
+    // 1️⃣ Resolve Visit / Admission
+    // ============================
+
+    if (visitId) {
+      visit = await prisma.opdVisit.findUnique({
+        where: { id: visitId },
+        include: {
+          admission: true
+        }
+      });
+
+      if (!visit) {
+        throw new ApiError(404, "OPD Visit not found");
+      }
+
+      if (visit.admission) {
+        admission = await prisma.admission.findUnique({
+          where: { id: visit.admission.id },
+          include: admissionInclude
+        });
+      }
+    }
+
+    if (admissionId && !admission) {
+      admission = await prisma.admission.findUnique({
+        where: { id: admissionId },
+        include: admissionInclude
+      });
+
+      if (!admission) {
+        throw new ApiError(404, "Admission not found");
+      }
+
+      if (admission.visitId) {
+        visit = await prisma.opdVisit.findUnique({
+          where: { id: admission.visitId }
+        });
+      }
+    }
+
+    // ============================
+    // 2️⃣ Billing Object
+    // ============================
+
+    const billingData = {
+      opd: { points: [], total: 0 },
+      ipd: { points: [], bedCharges: [], total: 0 },
+      grandTotal: 0
+    };
+
+    // ============================
+    // 3️⃣ OPD BILLING
+    // ============================
+
+    if (visit) {
+      const REGISTRATION_FEE = 500;
+
+      billingData.opd.points.push({
+        id: "registration",
+        type: "Mandatory",
+        name: "Registration Fee",
+        amount: REGISTRATION_FEE
+      });
+
+      billingData.opd.total += REGISTRATION_FEE;
+
+      // OPD Services
+      const opdServices = await prisma.serviceOrder.findMany({
+        where: {
+          visitId: visit.id,
+          admissionId: null,
+          isPaid: false,
+          status: { not: "Cancelled" }
+        },
+        include: { service: true }
+      });
+
+      opdServices.forEach(order => {
+        const amt = Number(order.service.basePrice);
+        billingData.opd.points.push({
+          id: order.id,
+          type: "Service",
+          name: order.service.name,
+          amount: amt
+        });
+        billingData.opd.total += amt;
+      });
+
+      // OPD Prescriptions
+      const opdPrescriptions = await prisma.prescription.findMany({
+        where: {
+          visitId: visit.id,
+          admissionId: null,
+          isPaid: false
+        },
+        include: {
+          items: { include: { medicine: true } }
+        }
+      });
+
+      opdPrescriptions.forEach(rx => {
+        rx.items.forEach(item => {
+          const amt = Number(item.medicine.unitPrice);
+          billingData.opd.points.push({
+            id: item.id,
+            type: "Medicine",
+            name: item.medicine.name,
+            amount: amt
+          });
+          billingData.opd.total += amt;
+        });
+      });
+    }
+
+    // ============================
+    // 4️⃣ IPD BILLING
+    // ============================
+
+    if (admission) {
+      const ADMISSION_FEE = 1000;
+      const NURSING_CHARGE_PER_DAY = 200;
+
+      billingData.ipd.points.push({
+        id: "admission_fee",
+        type: "Mandatory",
+        name: "Admission Fee",
+        amount: ADMISSION_FEE
+      });
+
+      billingData.ipd.total += ADMISSION_FEE;
+
+      // ---- BED CHARGES ----
+      let bedTotal = 0;
+      let totalDays = 0;
+
+      for (const transfer of admission.bedTransfers) {
+        if (!transfer.endDate) continue;
+
+        const days = Math.max(
+          1,
+          Math.ceil(
+            (new Date(transfer.endDate) - new Date(transfer.startDate)) /
+              86400000
+          )
+        );
+
+        const cost = days * Number(transfer.bed.ward.basePricePerDay);
+
+        billingData.ipd.bedCharges.push({
+          ward: transfer.bed.ward.name,
+          bed: transfer.bed.bedNumber,
+          days,
+          cost
+        });
+
+        bedTotal += cost;
+        totalDays += days;
+      }
+
+      // Active bed
+      const activeTransfer = admission.bedTransfers.find(
+        t => !t.endDate
+      );
+
+      if (activeTransfer && admission.currentBed) {
+        const days = Math.max(
+          1,
+          Math.ceil(
+            (new Date() - new Date(activeTransfer.startDate)) / 86400000
+          )
+        );
+
+        const cost =
+          days *
+          Number(admission.currentBed.ward.basePricePerDay);
+
+        billingData.ipd.bedCharges.push({
+          ward: admission.currentBed.ward.name,
+          bed: admission.currentBed.bedNumber,
+          days,
+          cost,
+          status: "Active"
+        });
+
+        bedTotal += cost;
+        totalDays += days;
+      }
+
+      billingData.ipd.total += bedTotal;
+
+      // ---- NURSING ----
+      const nursingCost = totalDays * NURSING_CHARGE_PER_DAY;
+
+      billingData.ipd.points.push({
+        id: "nursing",
+        type: "Mandatory",
+        name: `Nursing Charges (${totalDays} days)`,
+        amount: nursingCost
+      });
+
+      billingData.ipd.total += nursingCost;
+
+      // ---- SURGERIES ----
+      admission.surgeries.forEach(surgery => {
+        billingData.ipd.points.push({
+          id: surgery.id,
+          type: "Surgery",
+          name: surgery.procedureName,
+          amount: Number(surgery.totalAmount)
+        });
+        billingData.ipd.total += Number(surgery.totalAmount);
+      });
+
+      // ---- IPD SERVICES ----
+      const ipdServices = await prisma.serviceOrder.findMany({
+        where: {
+          admissionId: admission.id,
+          isPaid: false,
+          status: { not: "Cancelled" }
+        },
+        include: { service: true }
+      });
+
+      ipdServices.forEach(order => {
+        const amt = Number(order.service.basePrice);
+        billingData.ipd.points.push({
+          id: order.id,
+          type: "Service",
+          name: order.service.name,
+          amount: amt
+        });
+        billingData.ipd.total += amt;
+      });
+
+      // ---- IPD MEDICINES ----
+      const ipdPrescriptions = await prisma.prescription.findMany({
+        where: {
+          admissionId: admission.id,
+          isPaid: false
+        },
+        include: {
+          items: { include: { medicine: true } }
+        }
+      });
+
+      ipdPrescriptions.forEach(rx => {
+        rx.items.forEach(item => {
+          const amt = Number(item.medicine.unitPrice);
+          billingData.ipd.points.push({
+            id: item.id,
+            type: "Medicine",
+            name: item.medicine.name,
+            amount: amt
+          });
+          billingData.ipd.total += amt;
+        });
+      });
+    }
+
+    billingData.grandTotal =
+      billingData.opd.total + billingData.ipd.total;
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, billingData, "Active bill fetched"));
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error"
+    });
+  }
 };
+
+// ============================
+// 🔹 Reusable Admission Include
+// ============================
+
+const admissionInclude = {
+  bedTransfers: {
+    include: {
+      bed: {
+        include: { ward: true }
+      }
+    },
+    orderBy: { startDate: "asc" }
+  },
+  currentBed: {
+    include: { ward: true }
+  },
+  surgeries: {
+    where: { isPaid: false }
+  }
+};
+
 
 // Finalize Bill
 // Logic: Completes the visit and finalizes any draft invoice.
