@@ -26,7 +26,7 @@ export default function EmergencyPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Triage Selection */}
-                <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 h-fit">
+                <div className="bg-white p-6 rounded-4xl shadow-xl border border-slate-100 h-fit">
                     <SectionHeader icon={Activity} title="Triage Assessment" iconClassName="text-rose-600" />
                     <div className="space-y-3">
                         {TRIAGE_LEVELS.map((t) => (

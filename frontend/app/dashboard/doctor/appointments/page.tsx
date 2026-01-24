@@ -1,7 +1,6 @@
-"use client";
-
 import { PageHeader } from '@/components/ui/page-header';
 import { Calendar, Filter, Search, Clock, MapPin, User } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DoctorAppointments() {
     return (
@@ -39,9 +38,11 @@ export default function DoctorAppointments() {
                             </div>
 
                             <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                                    Start Consult
-                                </button>
+                                <Link href={`/dashboard/doctor/appointments/${i}`}>
+                                    <button className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+                                        Start Consult
+                                    </button>
+                                </Link>
                                 <button className="p-2.5 border border-slate-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
                                     <Calendar size={18} />
                                 </button>

@@ -91,7 +91,7 @@ export default function ReceptionistDashboard() {
                     <Link
                         key={i}
                         href={mod.href}
-                        className="group p-6 bg-white rounded-[2rem] border border-slate-200 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 transition-all relative overflow-hidden"
+                        className="group p-6 bg-white rounded-4xl border border-slate-200 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 transition-all relative overflow-hidden"
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className={`p-3.5 rounded-2xl text-white shadow-lg ${mod.color}`}>

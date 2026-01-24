@@ -1,13 +1,13 @@
 // ENUMS from Prisma Schema
 
 export enum UserRole {
-    Admin = 'admin',
-    Doctor = 'doctor',
-    Nurse = 'nurse',
-    Receptionist = 'receptionist',
-    Pharmacist = 'pharmacist',
-    LabTech = 'labtech',
-    RadiologyTech = 'radiologytech',
+    Admin = 'Admin',
+    Doctor = 'Doctor',
+    Nurse = 'Nurse',
+    Receptionist = 'Receptionist',
+    Pharmacist = 'Pharmacist',
+    LabTech = 'LabTech',
+    RadiologyTech = 'RadiologyTech',
     OTManager = 'OT Manager'
 }
 

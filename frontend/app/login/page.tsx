@@ -28,7 +28,11 @@ export default function LoginPage() {
 
             // localStorage.setItem('staff', JSON.stringify(res.data));
             // toast.success("Login Successful! Redirecting...");
-
+            localStorage.setItem('staff', JSON.stringify({
+                role: selectedRole,
+                name: "Alex Morgan"
+            }));
+            toast.success("Login Successful! Redirecting...");
             setTimeout(() => {
                 router.push(`/dashboard/${selectedRole.split(" ")[0].toLowerCase()}`);
             }, 1000);
@@ -87,7 +91,7 @@ export default function LoginPage() {
                     <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-                        className="absolute bottom-[-100px] right-[-100px] w-80 h-80 border-[40px] border-white/5 rounded-full"
+                        className="absolute bottom-[-100px] right-[-100px] w-80 h-80 border-40 border-white/5 rounded-full"
                     ></motion.div>
                 </div>
 

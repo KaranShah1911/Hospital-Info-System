@@ -123,7 +123,7 @@ export const SIDEBAR_LINKS = {
         { label: 'Report Validation', href: '/dashboard/radiologytech/validation', icon: ShieldCheck },
     ],
     [UserRole.Doctor]: [
-    { label: 'Overview', href: '/dashboard/doctor/overview', icon: LayoutDashboard },
+    { label: 'Overview', href: '/dashboard/doctor', icon: LayoutDashboard },
     { label: 'Appointments', href: '/dashboard/doctor/appointments', icon: Calendar },
     { label: 'In-Patient (IPD)', href: '/dashboard/doctor/ipd', icon: Activity },
     { label: 'Surgery (OT)', href: '/dashboard/doctor/surgery', icon: Scissors },

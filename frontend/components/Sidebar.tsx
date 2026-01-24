@@ -11,21 +11,37 @@ import { motion } from 'framer-motion';
 
 interface SidebarProps {
     userName?: string;
+    role?: string;
 }
 
-export function Sidebar({ userName = "Staff Member" }: SidebarProps) {
+export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarProps) {
     const pathname = usePathname();
-    const [role, setRole] = useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(propRole || null);
 
     useEffect(() => {
-        const storedRole = localStorage.getItem('role');
-        if (storedRole) {
-            setRole(storedRole);
+        if (propRole) {
+            setRole(propRole);
+            return;
         }
-    }, []);
+
+        const storedStaff = localStorage.getItem('staff');
+        if (storedStaff) {
+            try {
+                const parsed = JSON.parse(storedStaff);
+                if (parsed.role) setRole(parsed.role);
+            } catch (e) {
+                console.error("Failed to parse staff info", e);
+            }
+        } else {
+            // Fallback for legacy
+            const legacyRole = localStorage.getItem('role');
+            if (legacyRole) setRole(legacyRole);
+        }
+    }, [propRole]);
 
     if (!role) return null;
 
+    // keyof match logic
     const links = SIDEBAR_LINKS[role as keyof typeof SIDEBAR_LINKS] || [];
     const roleInfo = ROLE_CONFIG[role as keyof typeof ROLE_CONFIG];
 
@@ -61,27 +77,11 @@ export function Sidebar({ userName = "Staff Member" }: SidebarProps) {
             <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
                 <div className="px-2 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Module Access
-                </div>
-
-                {/* Dashboard Home - Hidden for Pharmacist as they default to Fulfillment */}
-                {role !== UserRole.Pharmacist && (
-                    <Link
-                        href={`/dashboard/${role.toLocaleLowerCase()}`}
-                        className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all group font-medium text-sm",
-                            pathname === `/dashboard/${role.toLocaleLowerCase()}`
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 font-bold"
-                                : "hover:bg-slate-800 hover:text-white"
-                        )}
-                    >
-                        <LayoutGrid size={18} className={pathname === '/dashboard' ? "text-white" : "text-slate-500 group-hover:text-white"} />
-                        Overview
-                    </Link>
-                )}
+                </div>                
 
                 {links.map((link) => {
                     const Icon = link.icon;
-                    const isActive = pathname.startsWith(link.href);
+                    const isActive = pathname === link.href;
 
                     return (
                         <Link
