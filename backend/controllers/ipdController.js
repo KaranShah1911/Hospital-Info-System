@@ -5,65 +5,65 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Handles Patient Admission - Track 2 Step 2
 // Logic: Admits a patient, creating an Admission record.
 export const admitPatient = async (req, res) => {
-  try {
-    const { patientId, admittingDoctorId, departmentId, admissionType, reasonForAdmission, visitId, bedId } = req.body;
-    // bedId = Optional initial bed selection
+    try {
+        const { patientId, admittingDoctorId, departmentId, admissionType, reasonForAdmission, visitId, bedId } = req.body;
+        // bedId = Optional initial bed selection
 
-    const result = await prisma.$transaction(async (tx) => {
-        let currentBedId = null;
+        const result = await prisma.$transaction(async (tx) => {
+            let currentBedId = null;
 
-        // Bed Validation Logic
-        if (bedId) {
-            const bed = await tx.bed.findUnique({ where: { id: bedId } });
-            
-            if (!bed) {
-                throw new ApiError(404, "Selected bed not found");
+            // Bed Validation Logic
+            if (bedId) {
+                const bed = await tx.bed.findUnique({ where: { id: bedId } });
+
+                if (!bed) {
+                    throw new ApiError(404, "Selected bed not found");
+                }
+                if (bed.status !== 'Available') {
+                    throw new ApiError(400, `Selected bed is currently ${bed.status}`);
+                }
+
+                currentBedId = bedId;
+
+                // Mark Bed as Occupied
+                await tx.bed.update({
+                    where: { id: bedId },
+                    data: { status: "Occupied" }
+                });
             }
-            if (bed.status !== 'Available') {
-                throw new ApiError(400, `Selected bed is currently ${bed.status}`);
-            }
 
-            currentBedId = bedId;
-
-            // Mark Bed as Occupied
-            await tx.bed.update({
-                where: { id: bedId },
-                data: { status: "Occupied" }
-            });
-        }
-
-        const admission = await tx.admission.create({
-            data: {
-                patientId,
-                admittingDoctorId,
-                departmentId,
-                visitId: visitId || null,
-                currentBedId, // Link active bed
-                admissionType: admissionType || "Emergency",
-                status: "Admitted",
-                admissionDate: new Date(),
-                reasonForAdmission
-            }
-        });
-
-        // 4. Create BedTransfer if bed allocated (Start Timer)
-        if (currentBedId) {
-            await tx.bedTransfer.create({
+            const admission = await tx.admission.create({
                 data: {
-                    admissionId: admission.id,
-                    bedId: currentBedId,
-                    startDate: new Date()
+                    patientId,
+                    admittingDoctorId,
+                    departmentId,
+                    visitId: visitId || null,
+                    currentBedId, // Link active bed
+                    admissionType: admissionType || "Emergency",
+                    status: "Admitted",
+                    admissionDate: new Date(),
+                    reasonForAdmission
                 }
             });
-        }
 
-        return admission;
-    });
+            // 4. Create BedTransfer if bed allocated (Start Timer)
+            if (currentBedId) {
+                await tx.bedTransfer.create({
+                    data: {
+                        admissionId: admission.id,
+                        bedId: currentBedId,
+                        startDate: new Date()
+                    }
+                });
+            }
 
-    res.status(201).json(new ApiResponse(201, result, "Patient admitted successfully"));
-  } catch (error) {
-    res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
-  }
+            return admission;
+        });
+
+        res.status(201).json(new ApiResponse(201, result, "Patient admitted successfully"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
 };
 // Handles Bed Allocation/Transfer - Track 2 Step 3
 // Logic: Allocates a bed to an admission and updates the bed status to Occupied.
@@ -234,7 +234,7 @@ export const recordSurgery = async (req, res) => {
                     admissionId,
                     procedureName,
                     surgeonId,
-                    otRoomNumber : otBedId,
+                    otRoomNumber: otBedId,
                     status: status || "Scheduled",
                     surgeryDate: requestedStart
                 }
@@ -281,7 +281,7 @@ export const dischargePatient = async (req, res) => {
         console.log("I am here at line 281");
         console.log(req.user.staffId);
 
-         const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             // 0. Fetch Admission to get Patient ID (needed for note)
             const admissionRecord = await tx.admission.findUnique({ where: { id: admissionId } });
             if (!admissionRecord) throw new ApiError(404, "Admission not found");
@@ -315,11 +315,11 @@ export const dischargePatient = async (req, res) => {
                     currentBedId: null // Clear bed reference
                 }
             });
-            
+
 
             // 4. Create Discharge Summary Note if summary provided
             if (summary) {
-                 await tx.clinicalNote.create({
+                await tx.clinicalNote.create({
                     data: {
                         patientId: admissionRecord.patientId,
                         admissionId: admissionId,
@@ -328,7 +328,7 @@ export const dischargePatient = async (req, res) => {
                         content: { text: summary }, // Structured JSON
                         isFinalized: true
                     }
-                 });
+                });
             }
 
             return admission;
@@ -385,7 +385,7 @@ export const updateChecklistItem = async (req, res) => {
                 where: { id: item.id },
                 data: {
                     isChecked,
-                    checkedBy : req.user.id,
+                    checkedBy: req.user.id,
                     timestamp: new Date()
                 }
             });
@@ -396,7 +396,7 @@ export const updateChecklistItem = async (req, res) => {
                     stage,
                     itemName,
                     isChecked,
-                    checkedBy : req.user.id,
+                    checkedBy: req.user.id,
                     timestamp: new Date()
                 }
             });
