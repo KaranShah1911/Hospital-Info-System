@@ -16,7 +16,7 @@ const VISIT_DATA = {
     time: '14:30',
     type: 'Emergency',
     doctor: 'Dr. James Wilson (Neurology)',
-    diagnosis: 'Acute Migraine with Aura',
+    diagnosis: 'Acute Migraine',
     vitals: {
         bp: '140/90',
         pulse: '98',
