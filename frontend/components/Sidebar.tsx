@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { UserRole } from '@/types';
 import { SIDEBAR_LINKS, ROLE_CONFIG } from '@/lib/constants';
-import { ShieldCheck, LogOut, LayoutGrid } from 'lucide-react';
+import { ShieldCheck, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 interface SidebarProps {
     userName?: string;
@@ -16,6 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const [role, setRole] = useState<string | null>(propRole || null);
 
     useEffect(() => {
@@ -103,7 +103,7 @@ export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarPr
 
             {/* Footer */}
             <div className="p-4 border-t border-slate-800/50">
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-slate-400 transition-colors text-sm font-bold group">
+                <button onClick={()=>router.push('/login')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-slate-400 transition-colors text-sm font-bold group">
                     <LogOut size={18} className="group-hover:text-red-400 transition-colors" />
                     Sign Out System
                 </button>

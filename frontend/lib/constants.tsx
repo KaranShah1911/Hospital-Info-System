@@ -123,10 +123,14 @@ export const SIDEBAR_LINKS = {
         { label: 'Report Validation', href: '/dashboard/radiologytech/validation', icon: ShieldCheck },
     ],
     [UserRole.Doctor]: [
-    { label: 'Overview', href: '/dashboard/doctor', icon: LayoutDashboard },
-    { label: 'Appointments', href: '/dashboard/doctor/appointments', icon: Calendar },
-    { label: 'In-Patient (IPD)', href: '/dashboard/doctor/ipd', icon: Activity },
-    { label: 'Surgery (OT)', href: '/dashboard/doctor/surgery', icon: Scissors },
+        { label: 'Overview', href: '/dashboard/doctor', icon: LayoutDashboard },
+        { label: 'Appointments', href: '/dashboard/doctor/appointments', icon: Calendar },
+        { label: 'In-Patient (IPD)', href: '/dashboard/doctor/ipd', icon: Activity },
+        { label: 'Surgery (OT)', href: '/dashboard/doctor/surgery', icon: Scissors },
+    ],
+    [UserRole.OTManager]: [
+        { label: 'Emergency Requests', href: '/dashboard/ot/requests', icon: ShieldAlert },
+        { label: 'OT Schedule', href: '/dashboard/ot/schedule', icon: Calendar },
     ],
 };
 

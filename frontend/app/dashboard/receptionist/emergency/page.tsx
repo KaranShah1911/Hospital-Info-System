@@ -3,22 +3,56 @@
 import React, { useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeader } from '@/components/ui/section-header';
-import { AlertTriangle, Siren, Clock, Activity, HeartPulse, Stethoscope, User, Save } from 'lucide-react';
+import { AlertTriangle, Siren, Clock, Activity, HeartPulse, Stethoscope, User, Save, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function EmergencyPage() {
-    const [triageLevel, setTriageLevel] = useState('Level 1'); // RED by default
+    const [triageLevel, setTriageLevel] = useState('Level 3');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [requestSent, setRequestSent] = useState(false);
+
+    // Form Data
     const [formData, setFormData] = useState({
+        arrivalMode: 'Ambulance',
         firstName: '',
         lastName: '',
         age: '',
         gender: 'Male',
-        complaint: '',
-        arrivalMode: 'Ambulance'
+        notes: ''
     });
-    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleEmergencyRequest = () => {
+        setIsSubmitting(true);
+
+        // Simulate API call and Critical Alert Dispatch
+        setTimeout(() => {
+            const patientName = (formData.firstName || formData.lastName)
+                ? `${formData.firstName} ${formData.lastName}`
+                : 'Unknown Trauma Patient';
+
+            const newRequest = {
+                id: 'EMG-' + Math.floor(Math.random() * 1000),
+                patientName: patientName.trim(),
+                severity: triageLevel === 'Level 1' ? 'Critical (Code Red)' : triageLevel === 'Level 2' ? 'Severe (Code Blue)' : 'Urgent (Code Orange)',
+                location: 'ER - Trauma Bay',
+                notes: `[${triageLevel}] ${formData.arrivalMode} Arrival. ${formData.notes}`,
+                timestamp: new Date().toISOString()
+            };
+
+            // Using localStorage to simulate passing data to OT Manager for the demo
+            const existing = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+            localStorage.setItem('emergencyRequests', JSON.stringify([newRequest, ...existing]));
+
+            setIsSubmitting(false);
+            setRequestSent(true);
+        }, 1500);
+    };
 
     const TRIAGE_LEVELS = [
         { level: 'Level 1', color: 'bg-red-600', val: 'Red', desc: 'Resuscitation (Immediate)' },
@@ -26,59 +60,39 @@ export default function EmergencyPage() {
         { level: 'Level 3', color: 'bg-green-500', val: 'Green', desc: 'Non Urgent (60 min)' },
     ];
 
-    const handleSubmit = async () => {
-        if (!formData.firstName || !formData.lastName || !formData.age || !formData.complaint) {
-            toast.error("Please fill all required fields for Rapid Intake");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // 1. Generate Temporary UHID/Register Patient
-            // In a real emergency, we might just create a temporary patient.
-            // Here we use the standard register endpoint but with minimal fields
-            const dobYear = new Date().getFullYear() - parseInt(formData.age);
-
-            // Register Patient
-            const patientRes = await api.post('/patients/register', {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                gender: formData.gender,
-                dob: `${dobYear}-01-01`,
-                phone: '9999999999', // Placeholder
-                address: 'Emergency Admission', // Placeholder
-                // Add emergency specific flag if backend supports, or just minimal fields
-            });
-
-            const patientId = patientRes.data.data.id;
-
-            // 2. Create Emergency Visit (with Triage)
-            const selectedTriage = TRIAGE_LEVELS.find(t => t.level === triageLevel)?.val || 'Red';
-
-            await api.post('/er/visit', {
-                patientId,
-                doctorId: null, // Assign later
-                triageColor: selectedTriage
-            });
-
-            toast.success("Emergency Code Initiated. Patient Admitted.");
-            // Reset
-            setFormData({
-                firstName: '',
-                lastName: '',
-                age: '',
-                gender: 'Male',
-                complaint: '',
-                arrivalMode: 'Ambulance'
-            });
-
-        } catch (error: any) {
-            console.error(error);
-            toast.error("Failed to initiate emergency intake");
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (requestSent) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in zoom-in duration-500">
+                <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-200">
+                    <CheckCircle size={48} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-800">Code Red Initiated</h2>
+                    <p className="text-slate-500 font-medium mt-2 text-lg">
+                        OT Manager and Emergency Response Team have been notified.<br />
+                        Proceed to <strong>Trauma Bay</strong> for patient handover.
+                    </p>
+                </div>
+                <button
+                    onClick={() => {
+                        setRequestSent(false);
+                        setFormData({
+                            arrivalMode: 'Ambulance',
+                            firstName: '',
+                            lastName: '',
+                            age: '',
+                            gender: 'Male',
+                            notes: ''
+                        });
+                        setTriageLevel('Level 3');
+                    }}
+                    className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                    Raise Another Request
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
@@ -123,8 +137,9 @@ export default function EmergencyPage() {
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Arrival Mode</label>
                             <select
+                                name="arrivalMode"
                                 value={formData.arrivalMode}
-                                onChange={(e) => setFormData({ ...formData, arrivalMode: e.target.value })}
+                                onChange={handleChange}
                                 className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800"
                             >
                                 <option>Ambulance</option>
@@ -139,16 +154,18 @@ export default function EmergencyPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <input
                                 type="text"
-                                placeholder="First Name"
+                                name="firstName"
                                 value={formData.firstName}
-                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                onChange={handleChange}
+                                placeholder="First Name"
                                 className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 focus:bg-white bg-slate-50 outline-none font-bold text-slate-800 transition-all placeholder:text-slate-400"
                             />
                             <input
                                 type="text"
-                                placeholder="Last Name"
+                                name="lastName"
                                 value={formData.lastName}
-                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                onChange={handleChange}
+                                placeholder="Last Name"
                                 className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 focus:bg-white bg-slate-50 outline-none font-bold text-slate-800 transition-all placeholder:text-slate-400"
                             />
                         </div>
@@ -156,36 +173,47 @@ export default function EmergencyPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <input
                                 type="text"
-                                placeholder="Age"
+                                name="age"
                                 value={formData.age}
-                                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                                onChange={handleChange}
+                                placeholder="Age"
                                 className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800 placeholder:text-slate-400"
                             />
                             <select
+                                name="gender"
                                 value={formData.gender}
-                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                onChange={handleChange}
                                 className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800"
                             >
-                                <option>Male</option><option>Female</option>
+                                <option>Male</option>
+                                <option>Female</option>
                             </select>
                         </div>
 
                         <textarea
+                            name="notes"
+                            value={formData.notes}
+                            onChange={handleChange}
                             placeholder="Chief Complaint / Injury Description..."
-                            value={formData.complaint}
-                            onChange={(e) => setFormData({ ...formData, complaint: e.target.value })}
                             className="w-full h-32 px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 bg-slate-50 outline-none font-bold text-slate-800 resize-none placeholder:text-slate-400"
                         ></textarea>
                     </div>
 
                     <div className="mt-8 pt-8 border-t border-slate-100">
                         <button
-                            onClick={handleSubmit}
-                            disabled={loading}
-                            className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-3xl shadow-xl shadow-red-500/30 flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                            onClick={handleEmergencyRequest}
+                            disabled={isSubmitting}
+                            className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-3xl shadow-xl shadow-red-500/30 flex items-center justify-center gap-3 transition-all disabled:opacity-70 disabled:hover:scale-100"
                         >
-                            <AlertTriangle size={20} />
-                            {loading ? 'Initiating Protocol...' : 'Initiate Code Red & Admit'}
+                            {isSubmitting ? (
+                                <>
+                                    <Activity className="animate-spin" /> DISPATCHING ALERT...
+                                </>
+                            ) : (
+                                <>
+                                    <AlertTriangle size={20} /> Initiate Code Red & Admit
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
