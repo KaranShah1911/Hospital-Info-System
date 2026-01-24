@@ -27,12 +27,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
             });
 
             localStorage.setItem('staff', JSON.stringify(res.data));
-            toast.success("Login Successful! Redirecting...");
+            // toast.success("Login Successfull! Redirecting...");
             localStorage.setItem('staff', JSON.stringify({
                 role: selectedRole,
                 name: "Alex Morgan"
             }));
-            toast.success("Login Successful! Redirecting...");
+            toast.success("Login Successfull! Redirecting...");
             setTimeout(() => {
                 router.push(`/dashboard/${selectedRole.split(" ")[0].toLowerCase()}`);
             }, 1000);
