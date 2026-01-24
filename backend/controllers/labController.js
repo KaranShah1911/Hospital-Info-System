@@ -25,8 +25,8 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Get Pending Lab Orders (With Filter Support)
 export const getLabWorklist = async (req, res) => {
     try {
-        // 1. Extract serviceId from Query Params (URL?serviceId=xyz)
-        const { serviceId } = req.query;
+        // 1. Extract query params
+        const { category } = req.query;
 
         // 2. Build the filter object dynamically
         const filterCriteria = {
@@ -35,13 +35,15 @@ export const getLabWorklist = async (req, res) => {
             }
         };
 
-        // 3. If a specific Service ID is requested, add it to the filter
-        if (serviceId) {
-            filterCriteria.serviceId = serviceId;
+        // 4. If a Category is requested (e.g. 'Lab', 'Radiology')
+        if (category) {
+            filterCriteria.service = {
+                category: category
+            };
         }
 
         const orders = await prisma.serviceOrder.findMany({
-            where: filterCriteria, // <--- Use the dynamic filter here
+            where: filterCriteria,
             include: {
                 patient: {
                     select: {
@@ -56,12 +58,13 @@ export const getLabWorklist = async (req, res) => {
                     select: { fullName: true }
                 },
                 service: {
-                    select: { name: true, code: true }
+                    select: { name: true, code: true, category: true }
                 }
             },
+            orderBy: { orderDate: 'asc' } // Good practice to order by date
         });
 
-        res.status(200).json(new ApiResponse(200, orders, "Pending lab orders fetched"));
+        res.status(200).json(new ApiResponse(200, orders, "Pending orders fetched"));
     } catch (error) {
         res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
