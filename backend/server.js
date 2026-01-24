@@ -15,12 +15,22 @@ import facilityRoutes from './routes/facilityRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import ipdRoutes from './routes/ipdRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import staffRoutes from './routes/staffRoutes.js';
+import otRoutes from './routes/otRoutes.js';
 import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
+import { initializeSocket } from './socket/socketHandler.js';
+
 import cors from 'cors';
+
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initializeSocket(httpServer);
 
 app.use(cors({
     origin: ['http://localhost:3001', 'http://localhost:5000'],
@@ -48,9 +58,11 @@ app.use('/facility', facilityRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/ipd', ipdRoutes);
 app.use('/ai', aiRoutes);
+app.use('/staff', staffRoutes);
+app.use('/ot', otRoutes);
 
 const PORT = process.env.PORT || 8000;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`MediFlow Core Server running on port ${PORT}`);
 });

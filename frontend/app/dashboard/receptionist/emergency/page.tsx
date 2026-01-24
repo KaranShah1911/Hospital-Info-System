@@ -7,6 +7,7 @@ import { AlertTriangle, Siren, Clock, Activity, HeartPulse, Stethoscope, User, S
 import { motion } from 'framer-motion';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { socket } from '@/lib/socket';
 
 export default function EmergencyPage() {
     const [triageLevel, setTriageLevel] = useState('Level 3');
@@ -27,31 +28,37 @@ export default function EmergencyPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+
+    // ... inside component ...
+
     const handleEmergencyRequest = () => {
         setIsSubmitting(true);
 
-        // Simulate API call and Critical Alert Dispatch
+        const patientName = (formData.firstName || formData.lastName)
+            ? `${formData.firstName} ${formData.lastName}`
+            : 'Unknown Trauma Patient';
+
+        const newRequest = {
+            id: 'EMG-' + Math.floor(Math.random() * 1000),
+            patientName: patientName.trim(),
+            severity: triageLevel === 'Level 1' ? 'Critical (Code Red)' : triageLevel === 'Level 2' ? 'Severe (Code Blue)' : 'Urgent (Code Orange)',
+            location: 'ER - Trauma Bay',
+            notes: `[${triageLevel}] ${formData.arrivalMode} Arrival. ${formData.notes}`,
+            timestamp: new Date().toISOString()
+        };
+
+        // Emit Socket Event
+        socket.emit("EMERGENCY_INITIATED", newRequest);
+
+        // Also save to localStorage for persistence/demo purposes if needed, 
+        // but rely on socket for real-time
+        const existing = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+        localStorage.setItem('emergencyRequests', JSON.stringify([newRequest, ...existing]));
+
         setTimeout(() => {
-            const patientName = (formData.firstName || formData.lastName)
-                ? `${formData.firstName} ${formData.lastName}`
-                : 'Unknown Trauma Patient';
-
-            const newRequest = {
-                id: 'EMG-' + Math.floor(Math.random() * 1000),
-                patientName: patientName.trim(),
-                severity: triageLevel === 'Level 1' ? 'Critical (Code Red)' : triageLevel === 'Level 2' ? 'Severe (Code Blue)' : 'Urgent (Code Orange)',
-                location: 'ER - Trauma Bay',
-                notes: `[${triageLevel}] ${formData.arrivalMode} Arrival. ${formData.notes}`,
-                timestamp: new Date().toISOString()
-            };
-
-            // Using localStorage to simulate passing data to OT Manager for the demo
-            const existing = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
-            localStorage.setItem('emergencyRequests', JSON.stringify([newRequest, ...existing]));
-
             setIsSubmitting(false);
             setRequestSent(true);
-        }, 1500);
+        }, 500);
     };
 
     const TRIAGE_LEVELS = [

@@ -1,5 +1,5 @@
 interface ImportMetaEnv {
-readonly NEXT_DEVELOPMENT_URL: string
+readonly NEXT_PUBLIC_DEVELOPMENT_URL: string
 }
 
 

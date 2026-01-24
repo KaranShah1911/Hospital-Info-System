@@ -1,51 +1,76 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { User, Activity, CheckCircle, ArrowLeft, AlertTriangle, Hospital, Plus, Trash2, Stethoscope, Syringe } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/section-header';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { socket } from '@/lib/socket';
+import api from '@/lib/api';
+import { toast } from 'react-toastify';
 
-// Mock Data for OT Rooms
-const OT_ROOMS = [
-    { id: 'OT-1', name: 'General Surgery 1', status: 'Available', type: 'General', equipment: ['C-Arm', 'Ventilator'] },
-    { id: 'OT-2', name: 'Ortho Suite', status: 'Occupied', type: 'Ortho', equipment: ['C-Arm', 'Fracture Table'] },
-    { id: 'OT-3', name: 'Neuro OT', status: 'Cleaning', type: 'Neuro', equipment: ['Microscope', 'Neuronav'] },
-    { id: 'OT-4', name: 'Emergency OT', status: 'Available', type: 'Trauma', equipment: ['Rapid Infuser', 'Lap Tower'] },
-];
+// Removed Mock Data
 
-// Mock Data for Staff
-const STAFF_POOL = [
-    { id: 'S1', name: 'Dr. Amit Patel', role: 'Surgeon', dept: 'Ortho' },
-    { id: 'S2', name: 'Dr. Sarah Smith', role: 'Surgeon', dept: 'General' },
-    { id: 'S3', name: 'Dr. Vikram Singh', role: 'Surgeon', dept: 'Neuro' },
-    { id: 'A1', name: 'Dr. Meera', role: 'Anaesthetist', dept: 'Anaesthesia' },
-    { id: 'A2', name: 'Dr. John', role: 'Anaesthetist', dept: 'Anaesthesia' },
-    { id: 'N1', name: 'Sister Mary', role: 'Nurse', dept: 'Nursing' },
-    { id: 'N2', name: 'Nurse Joy', role: 'Nurse', dept: 'Nursing' },
-    { id: 'T1', name: 'Tech Ramesh', role: 'Technician', dept: 'OT Tech' },
-];
-
-const ROLES = ['Lead Surgeon', 'Assistant Surgeon', 'Anaesthetist', 'Scrub Nurse', 'Circulating Nurse', 'OT Technician'];
-
-export default function OTAssignment({ params }: { params: { id: string } }) {
+export default function OTAssignment({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
+    // Unwrap params using React.use()
+    const { id } = React.use(params);
+
     const [assigned, setAssigned] = useState(false);
     const [requestDetails, setRequestDetails] = useState<any>(null);
 
     // Form State
     const [selectedRoom, setSelectedRoom] = useState<string>('');
-    const [team, setTeam] = useState<{ id: number, staffId: string, role: string }[]>([
-        { id: 1, staffId: '', role: 'Lead Surgeon' },
-        { id: 2, staffId: '', role: 'Anaesthetist' }
-    ]);
+    const [team, setTeam] = useState<{ id: number, staffId: string, role: string }[]>([]);
+
+    // Resource State
+    const [otRooms, setOtRooms] = useState<any[]>([]);
+    const [staffPool, setStaffPool] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // 1. Fetch Request Details from local storage (or API in full flow)
+        // ... (existing logic)
         const requests = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
-        const current = requests.find((r: any) => r.id === params.id);
+        const current = requests.find((r: any) => r.id === id);
         if (current) setRequestDetails(current);
-    }, [params.id]);
+
+        // 2. Fetch OT Rooms and Staff
+        const fetchResources = async () => {
+            try {
+                const [staffRes] = await Promise.all([
+                    // api.get('/ot/rooms'), // Reverted to static for now
+                    api.get('/staff?role=Doctor,Nurse,Technician')
+                ]);
+
+                // Static OT Rooms Data
+                const staticOtRooms = [
+                    { id: 'ot-1', name: 'OT-1 (General)', status: 'Available', equipment: ['C-Arm', 'Ventilator'], type: 'General' },
+                    { id: 'ot-2', name: 'OT-2 (Ortho)', status: 'Occupied', equipment: ['C-Arm', 'Fracture Table'], type: 'Ortho' },
+                    { id: 'ot-3', name: 'OT-3 (Cardiac)', status: 'Available', equipment: ['Heart-Lung Machine'], type: 'Cardiac' },
+                    { id: 'ot-4', name: 'OT-4 (Emergency)', status: 'Available', equipment: ['Trauma Kit', 'Advanced Monitoring'], type: 'Emergency' },
+                ];
+
+                setOtRooms(staticOtRooms);
+                setStaffPool(staffRes.data.data);
+
+            } catch (error) {
+                console.error("Failed to load OT resources", error);
+                toast.error("Could not load Staff list.");
+                // Fallback for demo if API fails entirely
+                setOtRooms([
+                    { id: 'ot-1', name: 'OT-1 (General)', status: 'Available', equipment: ['C-Arm', 'Ventilator'], type: 'General' },
+                    { id: 'ot-2', name: 'OT-2 (Ortho)', status: 'Occupied', equipment: ['C-Arm', 'Fracture Table'], type: 'Ortho' }
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchResources();
+
+    }, [id]);
 
     const addTeamMember = () => {
         setTeam([...team, { id: Date.now(), staffId: '', role: 'Scrub Nurse' }]);
@@ -59,26 +84,40 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
         setTeam(team.map(t => t.id === id ? { ...t, [field]: value } : t));
     };
 
+
     const handleAssign = () => {
         setAssigned(true);
 
-        const roomName = OT_ROOMS.find(r => r.id === selectedRoom)?.name;
-        const assignedStaffNames = team.map(t => STAFF_POOL.find(s => s.id === t.staffId)?.name).filter(Boolean);
+        const roomName = otRooms.find(r => r.id === selectedRoom)?.name;
+        // Construct Team Payload
+        const assignedTeam = team.map(t => {
+            const staff = staffPool.find(s => s.id === t.staffId);
+            return {
+                id: t.staffId,
+                name: staff?.name,
+                role: t.role
+            };
+        });
 
-        const notification = {
-            id: 'NOTIF-' + Date.now(),
-            title: `EMERGENCY ASSIGNMENT: ${requestDetails?.severity || 'CODE RED'}`,
-            message: `Report to ${roomName}. Team: ${assignedStaffNames.join(', ')}. Patient: ${requestDetails?.patientName}.`,
-            type: 'critical',
-            for: assignedStaffNames
+        console.log("OT_ASSIGNED payload team members:", assignedTeam);
+
+
+        const assignmentPayload = {
+            id: requestDetails?.id, // Request ID
+            patientName: requestDetails?.patientName,
+            otRoom: roomName,
+            teamMembers: assignedTeam,
+            timestamp: new Date().toISOString()
         };
 
-        const existing = JSON.parse(localStorage.getItem('staffNotifications') || '[]');
-        localStorage.setItem('staffNotifications', JSON.stringify([notification, ...existing]));
+        socket.emit("OT_ASSIGNED", assignmentPayload);
+
+        // Also update emergencyRequests in localStorage to remove it? 
+        // Or handled via socket event OT_ASSIGNMENT_COMPLETE in requests page
 
         setTimeout(() => {
             router.push('/dashboard/ot/requests');
-        }, 2000);
+        }, 3000);
     };
 
     if (assigned) {
@@ -105,7 +144,7 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
                     <ArrowLeft size={20} />
                 </Link>
                 <div className="flex-1">
-                    <PageHeader title="Assign Surgical Resources" description={`Emergency Case: ${params.id}`} />
+                    <PageHeader title="Assign Surgical Resources" description={`Emergency Case: ${id}`} />
                 </div>
             </div>
 
@@ -135,7 +174,7 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
                         <SectionHeader icon={Hospital} title="Select Operation Theater" />
 
                         <div className="mt-6 grid grid-cols-1 gap-4">
-                            {OT_ROOMS.map((room) => {
+                            {otRooms.map((room) => {
                                 const isAvailable = room.status === 'Available';
                                 return (
                                     <button
@@ -143,17 +182,17 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
                                         onClick={() => isAvailable && setSelectedRoom(room.id)}
                                         disabled={!isAvailable}
                                         className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${selectedRoom === room.id
-                                                ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
-                                                : isAvailable
-                                                    ? 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50'
-                                                    : 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
+                                            ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
+                                            : isAvailable
+                                                ? 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50'
+                                                : 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
                                             }`}
                                     >
                                         <div className="text-left">
                                             <div className="flex items-center gap-3">
                                                 <span className="font-black text-slate-800">{room.name}</span>
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${room.status === 'Available' ? 'bg-emerald-100 text-emerald-700' :
-                                                        room.status === 'Occupied' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                                                    room.status === 'Occupied' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                                                     }`}>
                                                     {room.status}
                                                 </span>
@@ -187,8 +226,9 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
                                                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100 appearance-none"
                                             >
                                                 <option value="">Select Staff...</option>
-                                                {STAFF_POOL.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name} ({s.dept})</option>
+                                                <option value="">Select Staff...</option>
+                                                {staffPool.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name} ({s.role} - {s.department})</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -200,7 +240,12 @@ export default function OTAssignment({ params }: { params: { id: string } }) {
                                                 onChange={(e) => updateMember(member.id, 'role', e.target.value)}
                                                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-100 appearance-none"
                                             >
-                                                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+// Need to ensure ROLES is available.
+                                                // Adding it inside component or moving declaration back if deleted
+                                                // Since I deleted the global const, I will add it here or use a hardcoded list in map.
+                                                {[
+                                                    'Lead Surgeon', 'Assistant Surgeon', 'Anaesthetist', 'Scrub Nurse', 'Circulating Nurse', 'OT Technician'
+                                                ].map(r => <option key={r} value={r}>{r}</option>)}
                                             </select>
                                         </div>
                                     </div>

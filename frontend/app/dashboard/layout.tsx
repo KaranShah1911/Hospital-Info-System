@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className="relative w-96 hidden md:block">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
+                                suppressHydrationWarning
                                 type="text"
                                 placeholder="Global Search (Patients, Doctors, Reports)..."
                                 className="w-full pl-12 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-700"

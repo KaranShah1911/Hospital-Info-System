@@ -3,21 +3,62 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { socket, joinRoom } from '@/lib/socket';
 
 export function EmergencyNotification() {
     const [notification, setNotification] = useState<any>(null);
-
     useEffect(() => {
-        const interval = setInterval(() => {
-            const stored = JSON.parse(localStorage.getItem('staffNotifications') || '[]');
-            if (stored.length > 0) {
-                // Get the latest notification
-                setNotification(stored[0]);
-                // Clear it so it doesn't loop forever in this simple mock
-                localStorage.setItem('staffNotifications', '[]');
+        // 1. Join User Room based on logged-in staff
+        const staffStr = localStorage.getItem('staff');
+        if (staffStr) {
+            const staff = JSON.parse(staffStr);
+            // In a real app, staff.id would be used. For this demo, we might need a mapping or assume staff.id exists.
+            // If the user hasn't logged in with a specific ID, we might miss this.
+            // For the demo walkthough, let's join all staff rooms or specific ones for testing?
+            // Let's assume the user logged in as one of the staff members in the POOL or has an ID.
+            // The login response returns { staffId, role, fullName }
+            // So we must check for staffId first, or fallback to id
+            const userId = staff.staffId || staff.id;
+
+            if (userId) {
+                console.log("Joining specific user room:", `user:${userId}`);
+                joinRoom(`user:${userId}`);
             }
-        }, 1000);
-        return () => clearInterval(interval);
+        }
+
+        // 2. Listen for alerts
+        const handleAlert = (data: any) => {
+            console.log("SURGERY_ALERT received:", data);
+
+            // Client-side filtering
+            const staffStr = localStorage.getItem('staff');
+            if (staffStr) {
+                const staff = JSON.parse(staffStr);
+                const myId = staff.staffId || staff.id;
+
+                // Check if I am in the team
+                const iAmAssigned = data.teamMembers?.some((m: any) => m.id === myId);
+
+                if (iAmAssigned) {
+                    console.log("I am assigned! Showing popup.");
+                    setNotification({
+                        ...data,
+                        message: `You have been assigned to ${data.otRoom} as ${data.teamMembers.find((m: any) => m.id === myId)?.role}`
+                    });
+                    // Play sound
+                } else {
+                    console.log("Ignoring alert - not for me.");
+                }
+            }
+        };
+
+        socket.on("SURGERY_ALERT", handleAlert);
+        // Also listen for GLOBAL_EMERGENCY_ALERT if we want everyone to know?
+        // socket.on("GLOBAL_EMERGENCY_ALERT", handleAlert);
+
+        return () => {
+            socket.off("SURGERY_ALERT", handleAlert);
+        };
     }, []);
 
     const handleAction = (action: string) => {

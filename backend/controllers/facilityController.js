@@ -113,8 +113,22 @@ export const getHospitalLayout = async (req, res) => {
 // Get Available Beds
 export const getAvailableBeds = async (req, res) => {
     try {
+        const { type } = req.query; // e.g. "OT", "General", "ICU"
+
+        const where = { status: 'Available' };
+
+        // If type is provided, filter beds where Ward.type = type
+        if (type) {
+            where.ward = {
+                type: {
+                    equals: type,
+                    mode: 'insensitive' // Optional: Case insensitive if needed
+                }
+            };
+        }
+
         const beds = await prisma.bed.findMany({
-            where: { status: 'Available' },
+            where,
             include: { ward: true },
             orderBy: { bedNumber: 'asc' }
         });

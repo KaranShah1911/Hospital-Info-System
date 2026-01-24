@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { ShieldAlert, Clock, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { socket, joinRoom } from '@/lib/socket';
+import { SurgeryCalendar } from '@/components/SurgeryCalendar';
 
 interface EmergencyRequest {
     id: string;
@@ -18,15 +20,37 @@ export default function EmergencyRequests() {
     const [requests, setRequests] = useState<EmergencyRequest[]>([]);
 
     useEffect(() => {
-        // Poll for requests from localStorage (simulating WebSocket)
-        const fetchRequests = () => {
-            const stored = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
-            setRequests(stored);
+        // Real-time Socket Listener
+        joinRoom('role:OTManager');
+
+        const handleNewRequest = (data: EmergencyRequest) => {
+            setRequests((prev) => {
+                const updated = [data, ...prev];
+                localStorage.setItem('emergencyRequests', JSON.stringify(updated));
+                return updated;
+            });
         };
 
-        fetchRequests();
-        const interval = setInterval(fetchRequests, 2000);
-        return () => clearInterval(interval);
+        const handleAssignment = (data: any) => {
+            // Remove assigned request from list
+            setRequests((prev) => {
+                const updated = prev.filter(r => r.id !== data.id);
+                localStorage.setItem('emergencyRequests', JSON.stringify(updated));
+                return updated;
+            });
+        };
+
+        socket.on("EMERGENCY_INITIATED", handleNewRequest);
+        socket.on("OT_ASSIGNMENT_COMPLETE", handleAssignment);
+
+        // Initial Load (still fallback to local storage for persistence demo or API)
+        const stored = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+        setRequests(stored);
+
+        return () => {
+            socket.off("EMERGENCY_INITIATED", handleNewRequest);
+            socket.off("OT_ASSIGNMENT_COMPLETE", handleAssignment);
+        };
     }, []);
 
     return (
@@ -84,6 +108,10 @@ export default function EmergencyRequests() {
                     )}
                 </div>
             )}
+
+            <div className="pt-8 border-t border-slate-200">
+                <SurgeryCalendar />
+            </div>
         </div>
     );
 

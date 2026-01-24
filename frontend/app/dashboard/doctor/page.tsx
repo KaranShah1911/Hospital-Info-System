@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Activity, Users, Clock, Calendar, ArrowRight, Stethoscope } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { SurgeryCalendar } from '@/components/SurgeryCalendar';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 
@@ -80,33 +81,17 @@ export default function DoctorOverview() {
 
             {/* Recent Activity / Schedule Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-3">
+                    <SurgeryCalendar />
+                </div>
+
+                {/* 
+                // Removed old simple appointment list in favor of new Calendar
                 <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl">
                     <SectionHeader icon={Calendar} title="Today's Schedule" />
-                    <div className="space-y-4">
-                        {loading && <div className="text-center py-4 text-slate-400">Loading schedule...</div>}
-                        {!loading && appointments.length === 0 && <div className="text-center py-4 text-slate-400">No appointments today.</div>}
-
-                        {appointments.map((apt: any) => (
-                            <div key={apt.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors group">
-                                <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 font-bold text-center w-16">
-                                    <div className="text-xs text-slate-400">
-                                        {new Date(apt.appointmentDate).getHours() >= 12 ? 'PM' : 'AM'}
-                                    </div>
-                                    <div className="text-lg text-slate-800">
-                                        {new Date(apt.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-slate-800">{apt.type || 'Consultation'} - {apt.status}</h4>
-                                    <p className="text-xs text-slate-500 font-medium">{apt.patient?.firstName} {apt.patient?.lastName} • {apt.patient?.uhid}</p>
-                                </div>
-                                <button className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-colors">
-                                    <ArrowRight size={20} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                    ...
+                </div> 
+                */}
 
                 <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
                     <div className="relative z-10">
