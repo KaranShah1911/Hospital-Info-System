@@ -1,0 +1,107 @@
+"use client";
+
+import React, { useState } from 'react';
+import { PageHeader } from '@/components/ui/page-header';
+import { SectionHeader } from '@/components/ui/section-header';
+import { AlertTriangle, Siren, Clock, Activity, HeartPulse, Stethoscope, User, Save } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function EmergencyPage() {
+    const [triageLevel, setTriageLevel] = useState('Level 3');
+
+    const TRIAGE_LEVELS = [
+        { level: 'Level 1', color: 'bg-red-600', desc: 'Resuscitation (Immediate)' },
+        { level: 'Level 2', color: 'bg-orange-500', desc: 'Emergent (15 min)' },
+        { level: 'Level 3', color: 'bg-yellow-500', desc: 'Urgent (30 min)' },
+        { level: 'Level 4', color: 'bg-blue-500', desc: 'Less Urgent (60 min)' },
+        { level: 'Level 5', color: 'bg-green-500', desc: 'Non Urgent (120 min)' },
+    ];
+
+    return (
+        <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
+            <div className="flex items-center justify-between">
+                <PageHeader title="Emergency Trauma Intake" description="Rapid Patient Registration & Triage" />
+                <div className="px-4 py-2 bg-red-100 text-red-600 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 animate-pulse">
+                    <Siren size={16} /> Active Emergency Protocol
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Triage Selection */}
+                <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 h-fit">
+                    <SectionHeader icon={Activity} title="Triage Assessment" iconClassName="text-rose-600" />
+                    <div className="space-y-3">
+                        {TRIAGE_LEVELS.map((t) => (
+                            <button
+                                key={t.level}
+                                onClick={() => setTriageLevel(t.level)}
+                                className={`w-full p-4 rounded-2xl border-2 transition-all text-left group ${triageLevel === t.level
+                                        ? `border-transparent ${t.color} text-white shadow-lg`
+                                        : 'border-slate-100 hover:border-slate-200 bg-slate-50'
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="font-black uppercase">{t.level}</span>
+                                    {triageLevel === t.level && <Activity size={16} />}
+                                </div>
+                                <div className={`text-xs font-bold ${triageLevel === t.level ? 'text-white/80' : 'text-slate-400'}`}>
+                                    {t.desc}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Rapid Form */}
+                <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                    <SectionHeader icon={HeartPulse} title="Vital Information (Quick Entry)" iconClassName="text-red-600" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidentified Patient?</label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
+                                    <input type="checkbox" className="w-5 h-5 rounded text-red-600 focus:ring-red-500 border-gray-300" />
+                                    Yes (Auto-generate Alias)
+                                </label>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Arrival Mode</label>
+                            <select className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
+                                <option>Ambulance</option>
+                                <option>Private Vehicle</option>
+                                <option>Walk-in</option>
+                                <option>Police Escort</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <input type="text" placeholder="First Name" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 focus:bg-white bg-slate-50 outline-none font-bold text-slate-800 transition-all placeholder:text-slate-400" />
+                            <input type="text" placeholder="Last Name" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 focus:bg-white bg-slate-50 outline-none font-bold text-slate-800 transition-all placeholder:text-slate-400" />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            <input type="text" placeholder="Age" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800 placeholder:text-slate-400" />
+                            <select className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800">
+                                <option>Male</option><option>Female</option>
+                            </select>
+                            <input type="text" placeholder="BP / Vitals" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800 placeholder:text-slate-400" />
+                        </div>
+
+                        <textarea placeholder="Chief Complaint / Injury Description..." className="w-full h-32 px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 bg-slate-50 outline-none font-bold text-slate-800 resize-none placeholder:text-slate-400"></textarea>
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-slate-100">
+                        <button className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-3xl shadow-xl shadow-red-500/30 flex items-center justify-center gap-3 transition-all">
+                            <AlertTriangle size={20} />
+                            Initiate Code Red & Admit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
