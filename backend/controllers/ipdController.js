@@ -6,7 +6,9 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Logic: Admits a patient, creating an Admission record.
 export const admitPatient = async (req, res) => {
     try {
-        const { patientId, admittingDoctorId, departmentId, admissionType, reasonForAdmission, visitId, bedId } = req.body;
+        const { patientId, departmentId, admissionType, reasonForAdmission, visitId, bedId } = req.body;
+
+        const admittingDoctorId = req.user.staffId;
         // bedId = Optional initial bed selection
 
         const result = await prisma.$transaction(async (tx) => {
@@ -65,6 +67,53 @@ export const admitPatient = async (req, res) => {
         res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
 };
+
+// Get Active Admissions
+// Logic: Fetches all active admissions (not discharged).
+export const getAdmissions = async (req, res) => {
+    try {
+        const doctorId = req.user.staffId;
+        const where = { status: "Admitted" };
+
+        // If doctorId is provided, filted by admitting doctor ?? 
+        // Or maybe we want all patients for the department?
+        // For now, let's keep it broad or allow filter.
+        if (doctorId) {
+            where.admittingDoctorId = doctorId;
+        }
+
+        const admissions = await prisma.admission.findMany({
+            where,
+            include: {
+                patient: {
+                    select: { firstName: true, lastName: true, uhid: true, gender: true } // age might not be in schema direclty but calculated? let's query raw for now or assume virtual
+                    // Patient schema has 'dob', we might need to compute age in frontend or here.
+                },
+                currentBed: {
+                    include: { ward: true }
+                },
+                admittingDoctor: {
+                    select: { fullName: true }
+                }
+            },
+            orderBy: { admissionDate: 'desc' }
+        });
+
+        // Compute Age helper
+        const admissionsWithAge = admissions.map(adm => ({
+            ...adm,
+            patient: {
+                ...adm.patient,
+                age: adm.patient.dob ? new Date().getFullYear() - new Date(adm.patient.dob).getFullYear() : 'N/A'
+            }
+        }));
+
+        res.status(200).json(new ApiResponse(200, admissionsWithAge, "Active admissions fetched"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
 // Handles Bed Allocation/Transfer - Track 2 Step 3
 // Logic: Allocates a bed to an admission and updates the bed status to Occupied.
 // Uses a transaction to ensure data integrity.

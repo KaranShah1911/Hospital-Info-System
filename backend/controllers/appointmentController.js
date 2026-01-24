@@ -47,7 +47,7 @@ export const bookAppointment = async (req, res) => {
         doctorId,
         departmentId,
         appointmentDate: new Date(appointmentDate),
-        tokenNumber: tokenNumber, 
+        tokenNumber: tokenNumber,
         status: "Scheduled",
         type: type || "New"
       }
@@ -63,32 +63,38 @@ export const bookAppointment = async (req, res) => {
 // Logic: Fetches appointments, optionally filtered by date or doctor.
 export const getAppointments = async (req, res) => {
   try {
-    const { date, doctorId } = req.query;
-    
+    const { date, } = req.query;
+
+    let doctorId = null;
+
+    if (req.user.role === 'Doctor') {
+      doctorId = req.user.staffId;
+    }
+
     const where = {};
     if (doctorId) where.doctorId = doctorId;
     if (date) {
-        // Simple date filtering (assuming exact date match or needing range)
-        // For simplicity: filtering by start of day to end of day
-        const dayStart = new Date(date);
-        dayStart.setHours(0,0,0,0);
-        const dayEnd = new Date(date);
-        dayEnd.setHours(23,59,59,999);
-        
-        where.appointmentDate = {
-            gte: dayStart,
-            lte: dayEnd
-        };
+      // Simple date filtering (assuming exact date match or needing range)
+      // For simplicity: filtering by start of day to end of day
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      where.appointmentDate = {
+        gte: dayStart,
+        lte: dayEnd
+      };
     }
 
     const appointments = await prisma.appointment.findMany({
       where,
       include: {
         patient: {
-            select: { firstName: true, lastName: true, uhid: true }
+          select: { firstName: true, lastName: true, uhid: true }
         },
         doctor: {
-            select: { fullName: true }
+          select: { fullName: true }
         }
       },
       orderBy: { appointmentDate: 'asc' }
@@ -107,36 +113,108 @@ export const checkInAppointment = async (req, res) => {
     const { appointmentId } = req.body;
 
     const appointment = await prisma.appointment.findUnique({
-        where: { id: appointmentId }
+      where: { id: appointmentId }
     });
 
     if (!appointment) throw new ApiError(404, "Appointment not found");
 
     // Transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
-        // 1. Create OPD Visit
-        const visit = await tx.opdVisit.create({
-            data: {
-                patientId: appointment.patientId,
-                doctorId: appointment.doctorId,
-                appointmentId: appointment.id,
-                visitType: "OPD",
-                status: "Waiting",
-                visitDate: new Date()
-            }
-        });
+      // 1. Create OPD Visit
+      const visit = await tx.opdVisit.create({
+        data: {
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          appointmentId: appointment.id,
+          visitType: "OPD",
+          status: "Waiting",
+          visitDate: new Date()
+        }
+      });
 
-        // 2. Update Appointment Status
-        await tx.appointment.update({
-            where: { id: appointmentId },
-            data: { status: "CheckedIn" }
-        });
-        
-        return visit;
+      // 2. Update Appointment Status
+      await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { status: "CheckedIn" }
+      });
+
+      return visit;
     });
 
     res.status(200).json(new ApiResponse(200, result, "Patient checked in successfully"));
   } catch (error) {
+    res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+  }
+};
+
+// Get Full Consultation Context
+// Logic: Fetches everything needed for the consultation screen
+// Get Full Consultation Context
+// Logic: Fetches everything needed for the consultation screen
+export const getConsultationDetails = async (req, res) => {
+  try {
+    const { id } = req.params; // Appointment ID directly from route
+    console.log("Fetch Details for:", id);
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        patient: {
+          include: {
+            medicalHistory: true,
+            opdVisits: {
+              take: 5,
+              orderBy: { visitDate: 'desc' },
+              include: { clinicalNotes: true, prescriptions: true }
+            },
+            // Fetch Active Admission if any?
+            admissions: {
+              where: { status: 'Admitted' },
+              take: 1,
+              include: { currentBed: { include: { ward: true } } } // Removed patientVitals to avoid schema errors if DB not migrated
+            }
+          }
+        },
+        doctor: { select: { fullName: true, department: true } }
+      }
+    });
+
+    if (!appointment) {
+      // console.error("Appointment not found in DB");
+      throw new ApiError(404, "Appointment not found");
+    }
+
+    // Format for frontend
+    const patient = appointment.patient;
+    // const lastVital = patient.admissions[0]?.patientVitals[0]; // Commented out
+
+    const data = {
+      id: appointment.id,
+      tokenNumber: appointment.tokenNumber,
+      status: appointment.status,
+      patient: {
+        id: patient.id,
+        uhid: patient.uhid,
+        firstName: patient.firstName,
+        lastName: patient.lastName,
+        age: patient.dob ? new Date().getFullYear() - new Date(patient.dob).getFullYear() : 'N/A',
+        gender: patient.gender,
+        bloodGroup: 'O+', // Add to schema if missing
+        allergies: patient.medicalHistory.filter(h => h.category === 'Allergy').map(h => h.name),
+        conditions: patient.medicalHistory.filter(h => h.category !== 'Allergy').map(h => h.name),
+        vitals: { bp: '120/80', pulse: 72, temp: 98.6, spo2: 98 } // Default / Mock if no recent vitals
+      },
+      history: patient.opdVisits.map(v => ({
+        date: v.visitDate,
+        diagnosis: v.clinicalNotes[0]?.content?.diagnosis || "Routine Checkup",
+        doctor: "Dr. Previous" // Simplify for now
+      }))
+    };
+
+    res.status(200).json(new ApiResponse(200, data, "Consultation details fetched"));
+
+  } catch (error) {
+    console.error("Consultation Details Error:", error);
     res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
   }
 };

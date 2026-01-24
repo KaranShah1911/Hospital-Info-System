@@ -14,6 +14,7 @@ import generalRoutes from './routes/generalRoutes.js';
 import facilityRoutes from './routes/facilityRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import ipdRoutes from './routes/ipdRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
@@ -46,6 +47,7 @@ app.use('/general', generalRoutes);
 app.use('/facility', facilityRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/ipd', ipdRoutes);
+app.use('/ai', aiRoutes);
 
 const PORT = process.env.PORT || 8000;
 
