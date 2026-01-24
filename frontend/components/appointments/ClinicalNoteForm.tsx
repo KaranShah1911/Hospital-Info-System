@@ -2,7 +2,7 @@
 
 import { Activity, Stethoscope } from 'lucide-react';
 
-export function ClinicalNoteForm() {
+export function ClinicalNoteForm({ patientId, visitId }: { patientId?: string, visitId?: string | null }) {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Vitals Entry Section */}
