@@ -132,6 +132,10 @@ export const SIDEBAR_LINKS = {
         { label: 'Emergency Requests', href: '/dashboard/ot/requests', icon: ShieldAlert },
         { label: 'OT Schedule', href: '/dashboard/ot/schedule', icon: Calendar },
     ],
+    [UserRole.Pharmacist]: [
+        { label: 'Prescription Fulfillment', href: '/dashboard/pharmacist/fulfillment', icon: Activity },
+        { label: 'Inventory Management', href: '/dashboard/pharmacist/inventory', icon: LayoutDashboard },
+    ],
 
 
     [UserRole.Admin]: [

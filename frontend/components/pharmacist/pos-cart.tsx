@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Medicine, Prescription, processSale, CartItem, getMedicines } from "@/lib/mock-data";
+import { Medicine, Prescription, CartItem } from "@/lib/mock-data";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,13 +16,6 @@ import {
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 
 interface PosCartProps {
     prescription?: Prescription | null;
@@ -48,8 +42,12 @@ export function PosCart({ prescription, onSuccess }: PosCartProps) {
     }, [prescription]);
 
     const loadStocks = async () => {
-        const data = await getMedicines();
-        setAvailableStocks(data);
+        try {
+            const response = await api.get('/pharmacy/inventory');
+            setAvailableStocks(response.data);
+        } catch (error) {
+            console.error("Failed to load inventory:", error);
+        }
     };
 
     // When prescription is selected, auto-populate cart best effort
@@ -71,8 +69,8 @@ export function PosCart({ prescription, onSuccess }: PosCartProps) {
                         medicineId: match.id,
                         name: match.name,
                         genericName: match.genericName,
-                        price: match.unitPrice,
-                        quantity: item.quantityPrescribed || 1,
+                        price: Number(match.unitPrice),
+                        quantity: item.quantityPrescribed || 1, // Default to 1 if not calculated
                         maxStock: match.stockQuantity
                     });
                 }
@@ -99,19 +97,41 @@ export function PosCart({ prescription, onSuccess }: PosCartProps) {
     };
 
     const handleCheckout = async () => {
+        if (!prescription && cart.length === 0) {
+            toast.error("Cart empty");
+            return;
+        }
+
         setLoading(true);
         try {
-            const saleItems: CartItem[] = cart.map(c => ({
+            const saleItems = cart.map(c => ({
                 medicineId: c.medicineId,
                 quantity: c.quantity
             }));
 
-            await processSale(saleItems);
+            // Backend Controller expects: { patientId, prescriptionId, items: [{ medicineId, quantity }] }
+            const payload = {
+                patientId: prescription?.patientId, // might be undefined if direct sale, but schema requires patientId usually
+                prescriptionId: prescription?.id,
+                items: saleItems
+            };
+
+            // If no prescription (direct sale), we need a patientId? 
+            // The logic in Fulfillment implies it's Prescription Fulfillment.
+            if (!payload.patientId) {
+                // If the UI supports Walk-in, we need patient search. 
+                // But for now context is Fulfillment page which has Prescription Search.
+                throw new Error("Patient ID missing (Select a prescription first)");
+            }
+
+            await api.post('/pharmacy/sale', payload);
+
             toast.success("Sale completed successfully! Stock updated.");
             setCart([]);
             onSuccess(); // Trigger parent refresh
+            loadStocks(); // Upgrade local stock state
         } catch (error: any) {
-            toast.error(error.message || "Checkout failed");
+            toast.error(error.response?.data?.error || error.message || "Checkout failed");
         } finally {
             setLoading(false);
         }

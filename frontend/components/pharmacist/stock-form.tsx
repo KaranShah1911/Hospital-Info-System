@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { addStock } from "@/lib/mock-data";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -49,15 +49,15 @@ export function StockForm({ onSuccess }: StockFormProps) {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
-            await addStock({
+            await api.post('/pharmacy/inventory', {
                 ...values,
                 expiryDate: new Date(values.expiryDate).toISOString(),
             });
             toast.success("Stock added successfully");
             form.reset();
             onSuccess();
-        } catch (error) {
-            toast.error("Failed to add stock");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to add stock");
             console.error(error);
         }
     }
@@ -133,7 +133,13 @@ export function StockForm({ onSuccess }: StockFormProps) {
                                     <FormItem>
                                         <FormLabel>Unit Price ($)</FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" {...field} />
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                {...field}
+                                                onChange={e => field.onChange(parseFloat(e.target.value))}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -149,7 +155,11 @@ export function StockForm({ onSuccess }: StockFormProps) {
                                     <FormItem>
                                         <FormLabel>Initial Quantity</FormLabel>
                                         <FormControl>
-                                            <Input type="number" {...field} />
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -162,7 +172,11 @@ export function StockForm({ onSuccess }: StockFormProps) {
                                     <FormItem>
                                         <FormLabel>Reorder Level</FormLabel>
                                         <FormControl>
-                                            <Input type="number" {...field} />
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

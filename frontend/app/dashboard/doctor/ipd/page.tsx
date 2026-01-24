@@ -7,6 +7,7 @@ import { PatientCard } from '@/components/ipd/PatientCard';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { MOCK_IPD_ADMISSIONS } from '@/lib/ipd-mock-data';
 
 export default function DoctorIPD() {
     const [admissions, setAdmissions] = useState<any[]>([]);
@@ -15,6 +16,11 @@ export default function DoctorIPD() {
 
     useEffect(() => {
         const fetchAdmissions = async () => {
+            // MOCK DATA INTEGRATION
+            // For now, we use local mock data to ensure the UI is visible.
+            // In production, uncomment the API call below.
+
+            /*
             try {
                 const res = await api.get('/ipd/admissions');
                 setAdmissions(res.data.data || []);
@@ -24,6 +30,13 @@ export default function DoctorIPD() {
             } finally {
                 setLoading(false);
             }
+            */
+
+            // Simulating API delay
+            setTimeout(() => {
+                setAdmissions(MOCK_IPD_ADMISSIONS);
+                setLoading(false);
+            }, 500);
         };
         fetchAdmissions();
     }, []);
