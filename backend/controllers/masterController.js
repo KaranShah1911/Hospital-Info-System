@@ -78,3 +78,27 @@ export const getMedicines = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getDoctors = async (req, res) => {
+    try {
+        const doctors = await prisma.user.findMany({
+            where: { role: "Doctor" },
+            select: {
+                id: true,
+                role: true,
+                staffProfile: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        departmentId: true,
+                        qualification: true
+                    }
+                }
+            }
+        });
+
+        res.json(doctors);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

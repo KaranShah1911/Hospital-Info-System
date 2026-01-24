@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createWard, addBeds, getHospitalLayout } from '../controllers/facilityController.js';
+import { createWard, addBeds, getHospitalLayout, getAvailableBeds } from '../controllers/facilityController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 
 // // Placeholder middlewares
@@ -18,5 +18,6 @@ router.post('/wards/:wardId/beds', authenticateToken, authorizeRoles('Admin'), a
 
 // Dashboard View
 router.get('/layout', getHospitalLayout);
+router.get('/beds/available', authenticateToken, getAvailableBeds);
 
 export default router;

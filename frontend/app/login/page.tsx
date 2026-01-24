@@ -15,19 +15,19 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
         try {
-            // const res = await await api.post('/auth/login', {
-            //     email,
-            //     password
-            // });
+            const res = await api.post('/auth/login', {
+                email,
+                password
+            });
 
-            // localStorage.setItem('staff', JSON.stringify(res.data));
-            // toast.success("Login Successful! Redirecting...");
+            localStorage.setItem('staff', JSON.stringify(res.data));
+            toast.success("Login Successful! Redirecting...");
             localStorage.setItem('staff', JSON.stringify({
                 role: selectedRole,
                 name: "Alex Morgan"

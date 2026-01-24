@@ -27,7 +27,7 @@ export const createWard = async (req, res) => {
         res.status(201).json(new ApiResponse(201, ward, "Ward created successfully"));
     } catch (error) {
         if (error.code === 'P2002') { // Unique constraint
-             return res.status(409).json(new ApiError(409, "Ward name already exists (if unique constraint matches)"));
+            return res.status(409).json(new ApiError(409, "Ward name already exists (if unique constraint matches)"));
         }
         res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
@@ -52,7 +52,7 @@ export const addBeds = async (req, res) => {
         if (count && count > 0) {
             // Find current bed count to auto-increment names
             const currentBedCount = await prisma.bed.count({ where: { wardId } });
-            
+
             const bedsData = [];
             for (let i = 1; i <= count; i++) {
                 const nextNum = currentBedCount + i;
@@ -66,7 +66,7 @@ export const addBeds = async (req, res) => {
             result = await prisma.bed.createMany({
                 data: bedsData
             });
-            
+
         } else if (bedNumber) {
             // Logic 2: Single Creation with specific name
             result = await prisma.bed.create({
@@ -107,5 +107,19 @@ export const getHospitalLayout = async (req, res) => {
         res.status(200).json(new ApiResponse(200, layout, "Hospital layout fetched"));
     } catch (error) {
         res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+// Get Available Beds
+export const getAvailableBeds = async (req, res) => {
+    try {
+        const beds = await prisma.bed.findMany({
+            where: { status: 'Available' },
+            include: { ward: true },
+            orderBy: { bedNumber: 'asc' }
+        });
+        res.status(200).json(new ApiResponse(200, beds, "Available beds fetched"));
+    } catch (error) {
+        res.status(500).json(new ApiError(500, error.message));
     }
 };

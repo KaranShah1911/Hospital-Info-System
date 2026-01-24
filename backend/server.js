@@ -1,5 +1,4 @@
 import express from 'express';
-// import cors from 'cors';
 import dotenv from 'dotenv';
 
 import authRoutes from './routes/authRoutes.js';
@@ -23,9 +22,9 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: 'http://localhost:3001',
+    origin: ['http://localhost:3001', 'http://localhost:5000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
 }));
 app.use(express.json());
@@ -48,7 +47,7 @@ app.use('/facility', facilityRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/ipd', ipdRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
     console.log(`MediFlow Core Server running on port ${PORT}`);

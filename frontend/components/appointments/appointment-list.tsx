@@ -3,11 +3,29 @@ import { Appointment, AppointmentStatus } from '@/types';
 import { Calendar, Clock, User, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { toast } from 'sonner';
+
 interface AppointmentListProps {
     appointments: Appointment[];
+    onCheckIn?: (id: string) => Promise<void>;
+    onCancel?: (id: string) => Promise<void>;
 }
 
-export function AppointmentList({ appointments }: AppointmentListProps) {
+export function AppointmentList({ appointments, onCheckIn, onCancel }: AppointmentListProps) {
+    const [processingId, setProcessingId] = React.useState<string | null>(null);
+
+    const handleAction = async (id: string, action: 'checkin' | 'cancel', handler?: (id: string) => Promise<void>) => {
+        if (!handler) return;
+        setProcessingId(id);
+        try {
+            await handler(id);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
     const getStatusColor = (status: AppointmentStatus) => {
         switch (status) {
             case AppointmentStatus.Scheduled: return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -46,13 +64,25 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
                         <div className={cn("px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border", getStatusColor(apt.status))}>
                             {apt.status}
                         </div>
+
                         {apt.status === AppointmentStatus.Scheduled && (
-                            <button className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Check In">
-                                <CheckCircle2 size={20} />
+                            <button
+                                onClick={() => handleAction(apt.id, 'checkin', onCheckIn)}
+                                disabled={!!processingId}
+                                className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                                title="Check In"
+                            >
+                                {processingId === apt.id ? <Clock size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
                             </button>
                         )}
+
                         {apt.status !== AppointmentStatus.Cancelled && apt.status !== AppointmentStatus.Completed && (
-                            <button className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Cancel">
+                            <button
+                                onClick={() => handleAction(apt.id, 'cancel', onCancel)}
+                                disabled={!!processingId}
+                                className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                title="Cancel"
+                            >
                                 <XCircle size={20} />
                             </button>
                         )}
