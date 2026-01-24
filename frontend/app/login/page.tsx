@@ -3,31 +3,42 @@
 import React, { useState } from 'react';
 import { UserRole } from '@/types';
 import { ROLE_CONFIG } from '@/lib/constants';
+import api from '@/lib/api';
+import { toast } from 'react-toastify';
 import { ShieldCheck, LogIn, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.Doctor);
+    const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.Admin);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        localStorage.setItem('role', selectedRole);
 
-        // Simulate API call
-        setTimeout(() => {
-            console.log("Logged in as:", {
-                role: selectedRole,
-                email: email || 'demo@medcore-his.com'
-            });
-            // Navigate to dashboard after login
-            router.push(`/dashboard/${selectedRole.toLowerCase()}`);
-        }, 1500);
+        try {
+            // const res = await await api.post('/auth/login', {
+            //     email,
+            //     password
+            // });
+
+            // localStorage.setItem('staff', JSON.stringify(res.data));
+            // toast.success("Login Successful! Redirecting...");
+
+            setTimeout(() => {
+                router.push(`/dashboard/${selectedRole.split(" ")[0].toLowerCase()}`);
+            }, 1000);
+
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Login failed. Please check your credentials.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

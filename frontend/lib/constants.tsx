@@ -1,5 +1,5 @@
 import { UserRole, AppointmentStatus, AppointmentType, Gender } from "@/types";
-import { Stethoscope, Syringe, ShieldAlert, Microscope, Calendar, Heart, Shield, BedDouble, UserPlus, CreditCard, Activity, FileText, ShieldCheck, Scan } from "lucide-react";
+import { Stethoscope, Syringe, ShieldAlert, Microscope, Calendar, User, Shield, BedDouble, UserPlus, CreditCard, Activity, FileText, ShieldCheck, Scan, LayoutDashboard, Scissors } from "lucide-react";
 import React from "react";
 
 export const ROLE_CONFIG = {
@@ -36,6 +36,11 @@ export const ROLE_CONFIG = {
     [UserRole.RadiologyTech]: {
         label: "Radiology Staff",
         icon: <Microscope size={20} className="text-current" />,
+        description: "Process and upload lab results."
+    },
+    [UserRole.OTManager]: {
+        label: "OT Manager",
+        icon: <User size={20} className="text-current" />,
         description: "Process and upload lab results."
     },
 };
@@ -109,10 +114,6 @@ export const SIDEBAR_LINKS = {
         { label: 'Bed Management', href: '/dashboard/receptionist/beds', icon: Activity },
         { label: 'Billing', href: '/dashboard/receptionist/billing', icon: CreditCard },
     ],
-    [UserRole.Doctor]: [
-        { label: 'My Patients', href: '/dashboard/doctor/patients', icon: UserPlus },
-        { label: 'Appointments', href: '/dashboard/doctor/appointments', icon: Calendar },
-    ],
     [UserRole.LabTech]: [
         { label: 'Sample Tracking', href: '/dashboard/labtech/tracking', icon: Activity },
         { label: 'Result Validation', href: '/dashboard/labtech/validation', icon: ShieldCheck },
@@ -121,9 +122,11 @@ export const SIDEBAR_LINKS = {
         { label: 'Exam Tracking', href: '/dashboard/radiologytech/tracking', icon: Activity },
         { label: 'Report Validation', href: '/dashboard/radiologytech/validation', icon: ShieldCheck },
     ],
-    [UserRole.Pharmacist]: [
-        { label: 'Prescription Fulfillment', href: '/dashboard/pharmacist/fulfillment', icon: Activity },
-        { label: 'Inventory Management', href: '/dashboard/pharmacist/inventory', icon: ShieldCheck },
+    [UserRole.Doctor]: [
+    { label: 'Overview', href: '/dashboard/doctor/overview', icon: LayoutDashboard },
+    { label: 'Appointments', href: '/dashboard/doctor/appointments', icon: Calendar },
+    { label: 'In-Patient (IPD)', href: '/dashboard/doctor/ipd', icon: Activity },
+    { label: 'Surgery (OT)', href: '/dashboard/doctor/surgery', icon: Scissors },
     ],
 };
 

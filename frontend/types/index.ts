@@ -7,7 +7,8 @@ export enum UserRole {
     Receptionist = 'receptionist',
     Pharmacist = 'pharmacist',
     LabTech = 'labtech',
-    RadiologyTech = 'radiologytech'
+    RadiologyTech = 'radiologytech',
+    OTManager = 'OT Manager'
 }
 
 export enum DepartmentType {
@@ -34,14 +35,13 @@ export enum AppointmentType {
     FollowUp = 'FollowUp'
 }
 
-// Interfaces based on Prisma Models
+// Interfaces based on Prisma Model
 
-export interface User {
+export interface Staff {
     id: string;
-    email: string;
     role: UserRole;
     isActive: boolean;
-    name?: string; // Optional in schema (via staffProfile usually), keeping for frontend convenience
+    fullName?: string; // Optional in schema (via staffProfile usually), keeping for frontend convenience
 }
 
 export interface Department {

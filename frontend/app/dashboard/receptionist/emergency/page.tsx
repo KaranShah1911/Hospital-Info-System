@@ -11,10 +11,8 @@ export default function EmergencyPage() {
 
     const TRIAGE_LEVELS = [
         { level: 'Level 1', color: 'bg-red-600', desc: 'Resuscitation (Immediate)' },
-        { level: 'Level 2', color: 'bg-orange-500', desc: 'Emergent (15 min)' },
-        { level: 'Level 3', color: 'bg-yellow-500', desc: 'Urgent (30 min)' },
-        { level: 'Level 4', color: 'bg-blue-500', desc: 'Less Urgent (60 min)' },
-        { level: 'Level 5', color: 'bg-green-500', desc: 'Non Urgent (120 min)' },
+        { level: 'Level 2', color: 'bg-yellow-500', desc: 'Urgent (15 min)' },
+        { level: 'Level 3', color: 'bg-green-500', desc: 'Non Urgent (60 min)' },
     ];
 
     return (
@@ -36,8 +34,8 @@ export default function EmergencyPage() {
                                 key={t.level}
                                 onClick={() => setTriageLevel(t.level)}
                                 className={`w-full p-4 rounded-2xl border-2 transition-all text-left group ${triageLevel === t.level
-                                        ? `border-transparent ${t.color} text-white shadow-lg`
-                                        : 'border-slate-100 hover:border-slate-200 bg-slate-50'
+                                    ? `border-transparent ${t.color} text-white shadow-lg`
+                                    : 'border-slate-100 hover:border-slate-200 bg-slate-50'
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-1">
@@ -58,15 +56,6 @@ export default function EmergencyPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidentified Patient?</label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
-                                    <input type="checkbox" className="w-5 h-5 rounded text-red-600 focus:ring-red-500 border-gray-300" />
-                                    Yes (Auto-generate Alias)
-                                </label>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Arrival Mode</label>
                             <select className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
                                 <option>Ambulance</option>
@@ -83,12 +72,11 @@ export default function EmergencyPage() {
                             <input type="text" placeholder="Last Name" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 focus:bg-white bg-slate-50 outline-none font-bold text-slate-800 transition-all placeholder:text-slate-400" />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <input type="text" placeholder="Age" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800 placeholder:text-slate-400" />
                             <select className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800">
                                 <option>Male</option><option>Female</option>
                             </select>
-                            <input type="text" placeholder="BP / Vitals" className="w-full px-5 py-4 rounded-2xl border-2 border-red-50 bg-slate-50 outline-none font-bold text-slate-800 placeholder:text-slate-400" />
                         </div>
 
                         <textarea placeholder="Chief Complaint / Injury Description..." className="w-full h-32 px-5 py-4 rounded-2xl border-2 border-red-50 focus:border-red-500 bg-slate-50 outline-none font-bold text-slate-800 resize-none placeholder:text-slate-400"></textarea>
