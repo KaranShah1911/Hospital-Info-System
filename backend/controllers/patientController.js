@@ -89,3 +89,38 @@ export const searchPatient = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const searchPatientSuggestions = async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query) {
+            return res.status(400).json({ error: "Provide query string" });
+        }
+
+        const patients = await prisma.patient.findMany({
+            where: {
+                OR: [
+                    { uhid: { contains: query, mode: 'insensitive' } },
+                    { firstName: { contains: query, mode: 'insensitive' } },
+                    { lastName: { contains: query, mode: 'insensitive' } },
+                    { phone: { contains: query, mode: 'insensitive' } }
+                ]
+            },
+            take: 10,
+            select: {
+                id: true,
+                uhid: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                gender: true,
+                dob: true
+            }
+        });
+
+        res.json(patients);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

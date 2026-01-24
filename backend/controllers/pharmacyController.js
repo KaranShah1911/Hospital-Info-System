@@ -61,12 +61,66 @@ export const createPharmacySale = async (req, res) => {
     }
 };
 
+// 1. Get Inventory with Status Calculation
 export const getInventory = async (req, res) => {
     try {
-        const medicines = await prisma.medicine.findMany();
-        res.json(medicines);
+        const medicines = await prisma.medicine.findMany({
+            orderBy: { name: 'asc' }
+        });
+
+        // Add status based on logic
+        const formattedMedicines = medicines.map(med => {
+            let status = 'In Stock';
+            if (med.stockQuantity <= 0) {
+                status = 'Out of Stock';
+            } else if (med.stockQuantity <= med.reorderLevel) {
+                status = 'Low Stock';
+            }
+
+            return {
+                ...med,
+                status // "In Stock" | "Low Stock" | "Out of Stock"
+            };
+        });
+
+        res.json(formattedMedicines);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+// 2. Add or Update Stock (Inventory Management)
+export const addStock = async (req, res) => {
+    try {
+        const { name, genericName, batchNumber, expiryDate, stockQuantity, reorderLevel, unitPrice } = req.body;
+
+        // Validation
+        if (!name || !stockQuantity || !unitPrice) {
+            throw new ApiError(400, "Name, Quantity and Price are required");
+        }
+
+        // Logic: Check if batch exists, if so update, else create new medicine entry
+        // NOTE: In a complex system, you might have Medicine -> Batches. 
+        // Here, following the schema, 'Medicine' acts like a batch/SKU combo or we create new entries.
+        // Assuming we are just creating a new medicine record for now as per schema limitations 
+        // (Schema has Medicine table but no separate Batch table relations shown clearly for one medicine having multiple batches).
+        // EDIT: Schema has `batchNumber` in `Medicine`. So each row is a batch.
+
+        const newMedicine = await prisma.medicine.create({
+            data: {
+                name,
+                genericName: genericName || "",
+                batchNumber: batchNumber || `BATCH-${Date.now()}`,
+                expiryDate: new Date(expiryDate),
+                stockQuantity: Number(stockQuantity),
+                reorderLevel: Number(reorderLevel) || 10,
+                unitPrice: Number(unitPrice)
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, newMedicine, "Stock added successfully"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
 };
 
@@ -195,12 +249,13 @@ export const getPrescriptionById = async (req, res) => {
             }
 
             // 2. Find Latest Prescription
+            // USER REQUEST: "he should get only the latest visit prescpriotns"
             prescription = await prisma.prescription.findFirst({
                 where: { patientId: patient.id },
                 orderBy: { date: 'desc' }, // Latest first
                 include: {
                     patient: {
-                        select: { firstName: true, lastName: true, uhid: true }
+                        select: { firstName: true, lastName: true, uhid: true, gender: true, dob: true }
                     },
                     doctor: {
                         select: { fullName: true }
@@ -215,17 +270,13 @@ export const getPrescriptionById = async (req, res) => {
                 }
             });
 
-            if (!prescription) {
-                throw new ApiError(404, "No prescriptions found for this patient");
-            }
-
         } else {
             // Assume it's a UUID (Prescription ID)
             prescription = await prisma.prescription.findUnique({
                 where: { id },
                 include: {
                     patient: {
-                        select: { firstName: true, lastName: true, uhid: true }
+                        select: { firstName: true, lastName: true, uhid: true, gender: true, dob: true }
                     },
                     doctor: {
                         select: { fullName: true }
