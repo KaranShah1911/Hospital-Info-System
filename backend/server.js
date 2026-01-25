@@ -17,10 +17,11 @@ import ipdRoutes from './routes/ipdRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
 import otRoutes from './routes/otRoutes.js';
+import messagingRoutes from './routes/messagingRoutes.js';
+import insuranceRoutes from './routes/insuranceRoutes.js';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { initializeSocket } from './socket/socketHandler.js';
-
 import cors from 'cors';
 
 
@@ -63,6 +64,8 @@ app.use('/ipd', ipdRoutes);
 app.use('/ai', aiRoutes);
 app.use('/staff', staffRoutes);
 app.use('/ot', otRoutes);
+app.use('/messaging', messagingRoutes);
+app.use('/insurance', insuranceRoutes);
 
 const PORT = process.env.PORT || 8000;
 

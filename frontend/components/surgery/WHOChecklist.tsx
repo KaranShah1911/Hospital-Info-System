@@ -3,7 +3,7 @@
 import { CheckSquare } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/section-header';
 
-export function WHOChecklist({ onComplete }: { onComplete: () => void }) {
+export function WHOChecklist({ surgeryId, onComplete }: { surgeryId: string, onComplete: () => void }) {
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl text-center">

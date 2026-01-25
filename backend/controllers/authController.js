@@ -70,7 +70,7 @@ export const login = async (req, res) => {
 
         saveToken(token, res);
 
-        res.json({
+        res.status(200).json({
             role: user.role,
             staffId: user.staffProfile?.id,
             fullName: user.staffProfile?.fullName

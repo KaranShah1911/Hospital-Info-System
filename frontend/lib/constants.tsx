@@ -113,6 +113,7 @@ export const SIDEBAR_LINKS = {
         { label: 'Emergency', href: '/dashboard/receptionist/emergency', icon: Shield },
         { label: 'Bed Management', href: '/dashboard/receptionist/beds', icon: Activity },
         { label: 'Billing', href: '/dashboard/receptionist/billing', icon: CreditCard },
+        { label: 'Insurance & TPA', href: '/dashboard/receptionist/insurance', icon: ShieldCheck },
     ],
     [UserRole.LabTech]: [
         { label: 'Sample Tracking', href: '/dashboard/labtech/tracking', icon: Activity },
