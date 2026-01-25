@@ -1,10 +1,31 @@
-"use client";
-
-import { FileText, Sparkles, CheckCircle, Printer } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, Sparkles, CheckCircle, Printer, Loader2 } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/section-header';
 import Link from 'next/link';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
-export function PostOpSummary() {
+export function PostOpSummary({ surgery }: { surgery: any }) {
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+
+    const handleComplete = async () => {
+        setLoading(true);
+        try {
+            await api.patch(`/ot/surgeries/${surgery.id}/status`, {
+                status: 'Completed'
+            });
+            toast.success("Surgery Marked as Completed");
+            router.push('/dashboard/doctor/surgery');
+        } catch (error) {
+            console.error("Failed to complete surgery", error);
+            toast.error("Failed to update status");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Success Banner */}
@@ -40,9 +61,9 @@ export function PostOpSummary() {
                 <div className="relative z-10">
                     <textarea
                         className="w-full h-96 p-6 bg-slate-50 rounded-3xl border border-slate-200 font-medium text-slate-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
-                        defaultValue={`PREOPERATIVE DIAGNOSIS: Acute Appendicitis.
-POSTOPERATIVE DIAGNOSIS: Acute Suppurative Appendicitis.
-PROCEDURE PERFORMED: Laparoscopic Appendectomy.
+                        defaultValue={`PREOPERATIVE DIAGNOSIS: ${surgery?.procedureName || 'Acute Appendicitis'}.
+POSTOPERATIVE DIAGNOSIS: ${surgery?.procedureName || 'Acute Suppurative Appendicitis'}.
+PROCEDURE PERFORMED: ${surgery?.procedureName}.
 ANAESTHESIA: General Endotracheal.
 
 FINDINGS:
@@ -68,11 +89,13 @@ PLAN:
                             Close
                         </button>
                     </Link>
-                    <Link href="/dashboard/doctor/surgery">
-                        <button className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105">
-                            Verify & Sign Record
-                        </button>
-                    </Link>
+                    <button
+                        onClick={handleComplete}
+                        disabled={loading}
+                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105 flex items-center gap-2"
+                    >
+                        {loading ? <Loader2 className="animate-spin" /> : <><CheckCircle size={20} /> Verify & Sign Record</>}
+                    </button>
                 </div>
             </div>
         </div>

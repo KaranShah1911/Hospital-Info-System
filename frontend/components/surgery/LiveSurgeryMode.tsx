@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Mic, Square, Save, Clock, Activity, Flag } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/section-header';
 
-export function LiveSurgeryMode({ onComplete }: { onComplete: () => void }) {
+export function LiveSurgeryMode({ surgery, onComplete }: { surgery: any, onComplete: () => void }) {
     const [seconds, setSeconds] = useState(0);
     const [isRecording, setIsRecording] = useState(true);
 

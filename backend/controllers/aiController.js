@@ -125,21 +125,27 @@ export async function calculateHolisticScore(req, res) {
     const top3Suggestions = generatedSuggestions.slice(0, 3);
 
     // --- SAVE TO DATABASE ---
-    const savedRecord = await prisma.patientHealthScore.create({
+    // const savedRecord = await prisma.patientHealthScore.create({
+    //   data: {
+    //     patientId: patient.id,
+    //     score: finalScore,
+    //     riskLevel: riskLevel,
+    //     reasoning: reasoning,
+    //     suggestions: top3Suggestions,
+    //     breakdown: breakdown // Saving the JSON breakdown
+    //   }
+    // });
+
+    // --- RETURN RESPONSE ---
+    res.status(200).json({ 
+      success: true, 
       data: {
-        patientId: patient.id,
         score: finalScore,
         riskLevel: riskLevel,
         reasoning: reasoning,
         suggestions: top3Suggestions,
         breakdown: breakdown // Saving the JSON breakdown
       }
-    });
-
-    // --- RETURN RESPONSE ---
-    res.status(200).json({ 
-      success: true, 
-      data: savedRecord 
     });
 
   } catch (error) {

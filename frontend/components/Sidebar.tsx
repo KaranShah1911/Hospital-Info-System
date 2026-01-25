@@ -7,6 +7,7 @@ import { SIDEBAR_LINKS, ROLE_CONFIG } from '@/lib/constants';
 import { ShieldCheck, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useStaffStore } from '@/context/staff';
 
 interface SidebarProps {
     userName?: string;
@@ -16,28 +17,11 @@ interface SidebarProps {
 export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const [role, setRole] = useState<string | null>(propRole || null);
+    const { staff, logout } = useStaffStore();
 
-    useEffect(() => {
-        if (propRole) {
-            setRole(propRole);
-            return;
-        }
-
-        const storedStaff = localStorage.getItem('staff');
-        if (storedStaff) {
-            try {
-                const parsed = JSON.parse(storedStaff);
-                if (parsed.role) setRole(parsed.role);
-            } catch (e) {
-                console.error("Failed to parse staff info", e);
-            }
-        } else {
-            // Fallback for legacy
-            const legacyRole = localStorage.getItem('role');
-            if (legacyRole) setRole(legacyRole);
-        }
-    }, [propRole]);
+    // Derived state from store
+    const role = propRole || staff?.role || null;
+    const displayName = userName !== "Staff Member" ? userName : (staff?.fullName || staff?.firstName || "Staff Member");
 
     if (!role) return null;
 
@@ -64,10 +48,10 @@ export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarPr
             <div className="px-6 py-6">
                 <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold ring-2 ring-indigo-500/50">
-                        {userName.charAt(0)}
+                        {displayName.charAt(0)}
                     </div>
                     <div className="overflow-hidden">
-                        <div className="text-sm font-bold text-white truncate">{userName}</div>
+                        <div className="text-sm font-bold text-white truncate">{displayName}</div>
                         <div className="text-[10px] uppercase font-bold text-indigo-400 truncate">{roleInfo?.label || role}</div>
                     </div>
                 </div>
@@ -77,7 +61,7 @@ export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarPr
             <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
                 <div className="px-2 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Module Access
-                </div>                
+                </div>
 
                 {links.map((link) => {
                     const Icon = link.icon;
@@ -103,7 +87,7 @@ export function Sidebar({ userName = "Staff Member", role: propRole }: SidebarPr
 
             {/* Footer */}
             <div className="p-4 border-t border-slate-800/50">
-                <button onClick={()=>router.push('/login')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-slate-400 transition-colors text-sm font-bold group">
+                <button onClick={() => { logout(); router.push('/login'); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-slate-400 transition-colors text-sm font-bold group">
                     <LogOut size={18} className="group-hover:text-red-400 transition-colors" />
                     Sign Out System
                 </button>

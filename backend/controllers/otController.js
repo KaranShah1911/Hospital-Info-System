@@ -77,3 +77,63 @@ export const getSurgeries = async (req, res) => {
         res.status(500).json(new ApiError(500, "Failed to fetch surgeries"));
     }
 };
+
+export const getSurgeryById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const surgery = await prisma.surgery.findUnique({
+            where: { id },
+            include: {
+                admission: {
+                    include: {
+                        patient: true,
+                        // Include Vitals for Pre-Op check
+                        patientVitals: {
+                            orderBy: { recordedAt: 'desc' },
+                            take: 1
+                        }
+                    }
+                },
+                surgeon: true,
+                teamMembers: {
+                    include: {
+                        staff: true
+                    }
+                },
+                checklists: true // Include checklists status
+            }
+        });
+
+        if (!surgery) {
+            throw new ApiError(404, "Surgery not found");
+        }
+
+        res.status(200).json(new ApiResponse(200, surgery, "Surgery details fetched"));
+    } catch (error) {
+        console.error("Get Surgery Data Error:", error);
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+export const updateSurgeryStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const updateData = { status };
+        // endTime not in schema yet
+        // if (status === 'Completed') {
+        //     updateData.endTime = new Date();
+        // }
+
+        const surgery = await prisma.surgery.update({
+            where: { id },
+            data: updateData
+        });
+
+        res.status(200).json(new ApiResponse(200, surgery, "Surgery status updated"));
+    } catch (error) {
+        console.error("Update Surgery Status Error:", error);
+        res.status(500).json(new ApiError(500, "Failed to update surgery status"));
+    }
+};
