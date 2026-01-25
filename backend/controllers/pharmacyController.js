@@ -130,7 +130,7 @@ export const addStock = async (req, res) => {
 // Logic: Creates a prescription with nested prescription items.
 export const createPrescription = async (req, res) => {
     try {
-        const { patientId, visitId, items } = req.body;
+        const { patientId, visitId, items , admissionId } = req.body;
         // items = [{ medicineId, dosage, frequency, duration, instruction }, ...]
 
         const prescription = await prisma.prescription.create({
@@ -138,6 +138,7 @@ export const createPrescription = async (req, res) => {
                 patientId,
                 doctorId: req.user.userId,
                 visitId,
+                admissionId,
                 items: {
                     create: items.map(item => ({
                         medicineId: item.medicineId,

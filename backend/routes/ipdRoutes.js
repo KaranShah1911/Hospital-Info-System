@@ -10,7 +10,9 @@ import {
     getAdmissions,
     getAdmissionById,
     addProgressNote,
-    getAdmissionNotes
+    getAdmissionNotes,
+    createCarePlan,
+    getCarePlans
 } from '../controllers/ipdController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 const router = Router();
@@ -22,6 +24,10 @@ router.get('/admissions', authenticateToken, authorizeRoles('Doctor', 'Nurse', '
 router.get('/admissions/:id', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getAdmissionById); // Get Single Admission
 router.get('/admissions/:id/notes', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getAdmissionNotes); // Get Notes
 router.post('/notes', authenticateToken, authorizeRoles('Doctor', 'Nurse'), addProgressNote); // Add Note
+
+router.post('/care-plan', authenticateToken, authorizeRoles('Doctor'), createCarePlan);
+router.get('/admissions/:admissionId/care-plan', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getCarePlans);
+
 
 router.post('/transfer-bed', authenticateToken, authorizeRoles('Nurse', 'Receptionist'), transferBed);
 // router.post('/surgeries', authenticateToken, authorizeRoles('Doctor', 'Nurse'), recordSurgery); // Often under admissions or separate

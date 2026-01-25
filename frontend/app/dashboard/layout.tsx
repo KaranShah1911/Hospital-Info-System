@@ -40,7 +40,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors">
+                        <button
+                            suppressHydrationWarning
+                            className="relative p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+                        >
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
                         </button>

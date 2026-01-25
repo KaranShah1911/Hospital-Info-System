@@ -13,7 +13,9 @@ interface EmergencyRequest {
     severity: string;
     location: string;
     notes?: string;
+    notes?: string;
     timestamp: string;
+    isMLC?: boolean;
 }
 
 export default function EmergencyRequests() {
@@ -89,6 +91,11 @@ export default function EmergencyRequests() {
                                             <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
                                                 <Clock size={12} /> {new Date(req.timestamp).toLocaleTimeString()}
                                             </span>
+                                            {req.isMLC && (
+                                                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 border border-orange-200 rounded text-[10px] font-black uppercase tracking-wider ml-2">
+                                                    MLC
+                                                </span>
+                                            )}
                                         </div>
                                         <h3 className="text-xl font-black text-slate-900">{req.patientName || "Unknown Patient"}</h3>
                                         <div className="flex flex-col gap-1 mt-1">

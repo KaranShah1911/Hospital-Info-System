@@ -9,10 +9,11 @@ interface PrescriptionFormProps {
     savedPrescriptions?: any[];
     patientId?: string;
     visitId?: string;
+    admissionId?: string;
     onSuccess?: () => void;
 }
 
-export function PrescriptionForm({ savedPrescriptions = [], patientId, visitId, onSuccess }: PrescriptionFormProps) {
+export function PrescriptionForm({ savedPrescriptions = [], patientId, visitId, admissionId, onSuccess }: PrescriptionFormProps) {
     const params = useParams();
     const id = params?.id as string;
 
@@ -58,9 +59,13 @@ export function PrescriptionForm({ savedPrescriptions = [], patientId, visitId, 
                 pid = details.data.data.patient.id;
             }
 
+            console.log(
+                "hereIAm", admissionId)
+
             await api.post('/pharmacy/prescriptions', {
                 patientId: pid,
                 visitId: visitId || null,
+                admissionId: admissionId || null,
                 items: prescriptionItems
             });
 
@@ -110,7 +115,7 @@ export function PrescriptionForm({ savedPrescriptions = [], patientId, visitId, 
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="font-bold text-slate-800 text-sm">{m.name}</span>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${m.stockQuantity > 50 ? 'bg-emerald-100 text-emerald-700' :
-                                                    m.stockQuantity > 10 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                                                m.stockQuantity > 10 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
                                                 }`}>
                                                 {m.stockQuantity} Left
                                             </span>

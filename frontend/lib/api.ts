@@ -1,11 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-<<<<<<< Updated upstream
-    baseURL: process.env.NEXT_PUBLIC_DEVELOPMENT_URL,
-=======
-    baseURL: 'http://localhost:3000', // Proxy redirects this to 8000
->>>>>>> Stashed changes
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
         "Content-Type": "application/json",
     },

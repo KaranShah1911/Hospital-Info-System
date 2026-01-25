@@ -29,7 +29,7 @@ export const initializeSocket = (server) => {
             io.to("role:OTManager").emit("EMERGENCY_INITIATED", data);
 
             // Also broadcast to global emergency channel if needed
-            io.emit("GLOBAL_EMERGENCY_ALERT", data);
+            socket.broadcast.emit("GLOBAL_EMERGENCY_ALERT", data);
         });
 
         // 2. OT ASSIGNED (From OT Manager)

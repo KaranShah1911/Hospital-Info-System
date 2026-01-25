@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { Search, FileText, Calendar, Activity, ChevronRight, X, Stethoscope, Pill, ClipboardList, BedDouble, CreditCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// API Helpers (Ideally in lib/api.ts, but standardizing here for speed)
-const API_URL = 'http://localhost:3000';
+import api from "@/lib/api";
 
 export default function DoctorEMRPage() {
     const [uhid, setUhid] = useState('');
@@ -15,13 +14,6 @@ export default function DoctorEMRPage() {
     const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
     const [kundali, setKundali] = useState<any>(null);
     const [kundaliLoading, setKundaliLoading] = useState(false);
-
-    const getAuthHeader = (): HeadersInit => {
-        const staff = localStorage.getItem('staff');
-        if (!staff) return {};
-        const { accessToken } = JSON.parse(staff);
-        return { 'Authorization': `Bearer ${accessToken}` };
-    };
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,31 +27,25 @@ export default function DoctorEMRPage() {
 
         try {
             // 1. Search Patient by UHID
-            const searchRes = await fetch(`${API_URL}/patients/search-for-emr?uhid=${uhid}`, {
-                headers: getAuthHeader()
-            });
+            const searchRes = await api.get(`/patients/search-for-emr?uhid=${uhid}`);
+            console.log(searchRes)
 
-            if (!searchRes.ok) throw new Error('Patient not found');
-            const patientData = await searchRes.json();
+            const patientData = searchRes.data;
 
             // 2. Fetch History (Assuming patientData has ID)
-            const historyRes = await fetch(`${API_URL}/clinical/history/${patientData.id}`, {
-                headers: getAuthHeader()
-            });
-
-            if (historyRes.ok) {
-                const historyData = await historyRes.json();
+            try {
+                const historyRes = await api.get(`/clinical/history/${patientData.id}`);
+                const historyData = historyRes.data;
                 setPatient(historyData);
                 setVisits(historyData.opdVisits || []);
-            } else {
+            } catch (historyError) {
                 // Fallback if history endpoint fails, use patientData
                 setPatient(patientData);
                 setVisits(patientData.opdVisits || []);
             }
-
         } catch (error) {
             console.error(error);
-            alert('Patient not found with this UHID');
+            // alert('Patient not found with this UHID');
         } finally {
             setLoading(false);
         }
@@ -71,17 +57,8 @@ export default function DoctorEMRPage() {
         setKundali(null);
 
         try {
-            const res = await fetch(`${API_URL}/general/case-study`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...getAuthHeader()
-                },
-                body: JSON.stringify({ visitId })
-            });
-
-            if (!res.ok) throw new Error('Failed to fetch case study');
-            const data = await res.json();
+            const res = await api.post('/general/case-study', { visitId });
+            const data = res.data;
             setKundali(data.data); // ApiResponse wrapper
         } catch (error) {
             console.error(error);

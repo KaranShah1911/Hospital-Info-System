@@ -8,6 +8,8 @@ import { OverviewTab } from '@/components/ipd/OverviewTab';
 import { OrdersTab } from '@/components/ipd/OrdersTab';
 import { NotesTab } from '@/components/ipd/NotesTab';
 import { DischargeTab } from '@/components/ipd/DischargeTab';
+import { NurseInstructionForm } from '@/components/ipd/NurseInstructionForm';
+import { SmartPrescriptionTab } from '@/components/ipd/SmartPrescriptionTab';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 
@@ -145,6 +147,16 @@ export default function PatientCockpit() {
                     id: 'notes',
                     label: 'Progress Notes',
                     content: <NotesTab admissionId={id} />
+                },
+                {
+                    id: 'careplan',
+                    label: 'Nurse Instructions',
+                    content: <NurseInstructionForm admissionId={id} />
+                },
+                {
+                    id: 'smart-rx',
+                    label: 'Smart Rx (AI)',
+                    content: <SmartPrescriptionTab admissionId={id} patientId={displayData.patientId} />
                 },
                 {
                     id: 'discharge',

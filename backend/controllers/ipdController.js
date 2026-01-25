@@ -596,3 +596,57 @@ export const getAdmissionNotes = async (req, res) => {
     }
 };
 
+// ==========================================
+// CARE PLAN (NURSE INSTRUCTIONS)
+// ==========================================
+
+export const createCarePlan = async (req, res) => {
+    try {
+        const { admissionId, vitalsFrequency, vitalInstructions, dietType, dietNotes, activityLevel } = req.body;
+        
+        if (!admissionId || !vitalsFrequency) {
+            throw new ApiError(400, "Admission ID and Vitals Frequency are required");
+        }
+
+        const admission = await prisma.admission.findUnique({ where: { id: admissionId } });
+        if (!admission) throw new ApiError(404, "Admission not found");
+
+        const carePlan = await prisma.carePlan.create({
+            data: {
+                admissionId,
+                doctorId: req.user.staffId,
+                vitalsFrequency,
+                vitalInstructions,
+                dietType: dietType || "Normal",
+                dietNotes,
+                activityLevel
+            },
+            include: {
+                doctor: { select: { fullName: true } }
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, carePlan, "Care Plan / Nurse Instructions added"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+export const getCarePlans = async (req, res) => {
+    try {
+        const { admissionId } = req.params;
+
+        const carePlans = await prisma.carePlan.findMany({
+            where: { admissionId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                doctor: { select: { fullName: true } }
+            }
+        });
+
+        res.status(200).json(new ApiResponse(200, carePlans, "Care Plans fetched"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+

@@ -21,11 +21,13 @@ export default function EmergencyPage() {
         lastName: '',
         age: '',
         gender: 'Male',
-        notes: ''
+        notes: '',
+        isMLC: false
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
 
@@ -44,6 +46,7 @@ export default function EmergencyPage() {
             severity: triageLevel === 'Level 1' ? 'Critical (Code Red)' : triageLevel === 'Level 2' ? 'Severe (Code Blue)' : 'Urgent (Code Orange)',
             location: 'ER - Trauma Bay',
             notes: `[${triageLevel}] ${formData.arrivalMode} Arrival. ${formData.notes}`,
+            isMLC: formData.isMLC,
             timestamp: new Date().toISOString()
         };
 
@@ -89,7 +92,8 @@ export default function EmergencyPage() {
                             lastName: '',
                             age: '',
                             gender: 'Male',
-                            notes: ''
+                            notes: '',
+                            isMLC: false
                         });
                         setTriageLevel('Level 3');
                     }}
@@ -154,6 +158,20 @@ export default function EmergencyPage() {
                                 <option>Walk-in</option>
                                 <option>Police Escort</option>
                             </select>
+                        </div>
+
+                        <div className="flex items-center p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                            <input
+                                type="checkbox"
+                                name="isMLC"
+                                checked={formData.isMLC}
+                                onChange={handleChange}
+                                id="mlc-check"
+                                className="w-5 h-5 accent-orange-600 mr-3"
+                            />
+                            <label htmlFor="mlc-check" className="font-bold text-orange-800 text-sm cursor-pointer select-none">
+                                Mark as Medico-Legal Case (MLC)
+                            </label>
                         </div>
                     </div>
 

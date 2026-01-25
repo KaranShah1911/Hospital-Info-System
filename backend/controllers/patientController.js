@@ -88,17 +88,9 @@ export const searchPatientForEMR = async (req, res) => {
             }
         });
 
-        if (patients.length === 0) return res.status(404).json({ message: "No patients found" });
+        if (!patient) return res.status(404).json({ message: "No patient found" });
         
-        // Return list for autocomplete, or single object if strict check needed?
-        // Frontend expects list now? Let's return list always for search?
-        // Wait, existing code might expect object if exact match.
-        // Let's standardise: always return array, frontend adapts, 
-        // OR: detect if it's a "search list" request.
-        // For backwards compatibility with single result pages (if any), 
-        // I will return JSON structure: { results: [...] } or just [...]
-        
-        res.json(patients); 
+        res.json(patient); 
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
