@@ -6,8 +6,7 @@ dotenv.config();
 
 // Find your Account SID and Auth Token at twilio.com/console
 // and set the environment variables. See http://twil.io/secure
-export const createMessage = async (req, res) => {
-    const { message } = req.body;
+export const createMessage = async (message) => {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const client = twilio(accountSid, authToken);
@@ -19,16 +18,16 @@ export const createMessage = async (req, res) => {
         })
         .then(message => {
             console.log(message.sid);
-            res.status(200).json(new ApiResponse(200, {}, "Message sent successfully"));
-        });
+            return message.sid;
+        })
+        .catch(err => console.error("Twilio Error:", err));
 }
 
-export const createWhatsappMessage = async (req, res) => {
-    const { message } = req.body;
+export const createWhatsappMessage = async (message) => {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const client = twilio(accountSid, authToken);
-    client.messages
+    return client.messages
         .create({
             from: 'whatsapp:+14155238886',
             contentSid: 'HXb5b62575e6e4ff6129ad7c8efe1f983e',
@@ -37,7 +36,8 @@ export const createWhatsappMessage = async (req, res) => {
         })
         .then(message => {
             console.log(message.sid);
-            res.status(200).json(new ApiResponse(200, {}, "Message sent successfully"));
-        });
+            return message.sid;
+        })
+        .catch(err => console.error("Twilio WhatsApp Error:", err));
 }
 

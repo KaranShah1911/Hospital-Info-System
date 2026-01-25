@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { createWhatsappMessage } from './messagingController.js';
 
 // karan ke routes
 // export const getLabWorklist = async (req, res) => {
@@ -64,11 +65,7 @@ export const submitLabResult = async (req, res) => {
         const { testName, serviceOrderId, resultValue, serviceId, referenceRange, unit, remarks } = req.body;
 
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Create Result
-            // Note: Schema has `resultValue`, `testName`, `serviceOrderId`. 
-            // It also has `referenceRange` and `unit` (I saw nullable in schema).
-            // `technicianId` is user.id.
-            
+            // 1. Create Result and fetch related patient details via ServiceOrder
             const labResult = await tx.labResult.create({
                 data: {
                     serviceOrderId,
@@ -77,6 +74,13 @@ export const submitLabResult = async (req, res) => {
                     referenceRange: referenceRange || null,
                     unit: unit || null,
                     technicianId: req.user?.userId || null 
+                },
+                include: {
+                    serviceOrder: {
+                        include: {
+                            patient: true
+                        }
+                    }
                 }
             });
 
@@ -88,6 +92,18 @@ export const submitLabResult = async (req, res) => {
 
             return labResult;
         });
+
+        // result.serviceOrder.patient contains the patient details
+        const patient = result.serviceOrder.patient;
+        
+        console.log("Lab Result Created for:", patient.firstName);
+
+        try {
+            await createWhatsappMessage(`Lab Result for ${patient.firstName} ${patient.lastName} is available. Please visit the hospital to collect your result.`);
+        } catch (msgError) {
+            console.error("Failed to send WhatsApp message:", msgError);
+            // Don't fail the request if messaging fails
+        }
 
         res.status(201).json(new ApiResponse(201, result, "Result submitted successfully"));
     } catch (error) {

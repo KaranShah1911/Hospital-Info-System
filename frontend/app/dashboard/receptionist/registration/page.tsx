@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Search, ShieldCheck, CheckCircle2, AlertCircle,
-    Home, Heart, IdCard, User as UserIcon, Landmark, Printer, Phone, MapPin, Calendar
+    Home, Heart, IdCard, User as UserIcon, Landmark, Printer, Phone, MapPin, Calendar, UploadCloud
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -308,6 +309,40 @@ export default function RegistrationPage() {
                             <div className="lg:col-span-2 space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Permanent Address</label>
                                 <input required type="text" value={formData.permanentAddress} onChange={e => setFormData({ ...formData, permanentAddress: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800" />
+                            </div>
+                        </div>
+
+                        {/* 3. Old Medical Records (Mock Upload) */}
+                        <SectionHeader icon={Calendar} title="Previous Medical Records" iconClassName="text-orange-600" />
+                        <div className="grid grid-cols-1 gap-6">
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-center space-y-4">
+                                <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                                    <UploadCloud size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-700">Upload Old Medical Files</h3>
+                                    <p className="text-xs text-slate-500 font-bold mt-1">Supported format: .zip (Max 50MB)</p>
+                                </div>
+                                <input
+                                    type="file"
+                                    accept=".zip"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            const file = e.target.files[0];
+                                            toast.promise(new Promise((resolve) => setTimeout(resolve, 2000)), {
+                                                loading: 'Uploading medical records...',
+                                                success: `File "${file.name}" uploaded successfully (Mock)`,
+                                                error: 'Upload failed'
+                                            });
+                                        }
+                                    }}
+                                    className="block w-full text-sm text-slate-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-xs file:font-semibold
+                                    file:bg-indigo-50 file:text-indigo-700
+                                    hover:file:bg-indigo-100 cursor-pointer"
+                                />
                             </div>
                         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Stethoscope, Save, Archive, FileText } from 'lucide-react';
+import { Stethoscope, Save, Archive, FileText } from 'lucide-react';
 import React, { useState } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -13,7 +13,6 @@ interface ClinicalNoteFormProps {
 }
 
 export function ClinicalNoteForm({ patientId, visitId, savedNotes = [], onSuccess }: ClinicalNoteFormProps) {
-    const [vitals, setVitals] = useState({ bp: '', pulse: '', spo2: '', temp: '' });
     const [complaints, setComplaints] = useState('');
     const [diagnosis, setDiagnosis] = useState('');
     const [examNotes, setExamNotes] = useState('');
@@ -25,7 +24,6 @@ export function ClinicalNoteForm({ patientId, visitId, savedNotes = [], onSucces
         if (!complaints && !diagnosis) return toast.warning("Please enter at least complaints or diagnosis");
 
         const content = {
-            vitals,
             complaints,
             diagnosis,
             examination: examNotes
@@ -54,7 +52,6 @@ export function ClinicalNoteForm({ patientId, visitId, savedNotes = [], onSucces
             setComplaints('');
             setDiagnosis('');
             setExamNotes('');
-            setVitals({ bp: '', pulse: '', spo2: '', temp: '' });
 
             if (onSuccess) onSuccess();
         } catch (e: any) {
@@ -69,30 +66,6 @@ export function ClinicalNoteForm({ patientId, visitId, savedNotes = [], onSucces
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Input Section */}
             <div className="space-y-6">
-                {/* Vitals */}
-                <div className="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100 transition-all hover:border-indigo-200 hover:shadow-sm">
-                    <div className="flex items-center gap-2 mb-4 text-indigo-800 font-bold text-xs uppercase tracking-wider">
-                        <Activity size={14} /> Record Vitals
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 ml-1">BP (mmHg)</label>
-                            <input value={vitals.bp} onChange={e => setVitals({ ...vitals, bp: e.target.value })} placeholder="120/80" className="w-full px-4 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 ml-1">Pulse (bpm)</label>
-                            <input value={vitals.pulse} onChange={e => setVitals({ ...vitals, pulse: e.target.value })} type="number" placeholder="72" className="w-full px-4 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 ml-1">SpO2 (%)</label>
-                            <input value={vitals.spo2} onChange={e => setVitals({ ...vitals, spo2: e.target.value })} type="number" placeholder="98" className="w-full px-4 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 ml-1">Temp (°F)</label>
-                            <input value={vitals.temp} onChange={e => setVitals({ ...vitals, temp: e.target.value })} type="text" placeholder="98.6" className="w-full px-4 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                        </div>
-                    </div>
-                </div>
 
                 {/* Complaints */}
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:border-slate-200 hover:shadow-sm">
@@ -158,13 +131,7 @@ export function ClinicalNoteForm({ patientId, visitId, savedNotes = [], onSucces
                                             <span className="font-bold text-emerald-600">Diagnosis:</span> <span className="font-medium">{note.content.diagnosis}</span>
                                         </div>
                                     )}
-                                    {note.content?.vitals?.bp && (
-                                        <div className="flex gap-4 mt-2">
-                                            <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-bold">BP: {note.content.vitals.bp}</span>
-                                            <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-bold">P: {note.content.vitals.pulse}</span>
-                                            {note.content.vitals.temp && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-bold">T: {note.content.vitals.temp}°F</span>}
-                                        </div>
-                                    )}
+                                    {/* Removed Vitals Display from History */}
                                 </div>
                             </div>
                         ))}

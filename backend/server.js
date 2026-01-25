@@ -19,6 +19,7 @@ import staffRoutes from './routes/staffRoutes.js';
 import otRoutes from './routes/otRoutes.js';
 import messagingRoutes from './routes/messagingRoutes.js';
 import insuranceRoutes from './routes/insuranceRoutes.js';
+import voiceRoutes from './routes/voiceRoutes.js';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { initializeSocket } from './socket/socketHandler.js';
@@ -43,6 +44,7 @@ app.use(cors({
 
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Required for Twilio Webhooks
 
 app.use(cookieParser());
 
@@ -66,6 +68,7 @@ app.use('/staff', staffRoutes);
 app.use('/ot', otRoutes);
 app.use('/messaging', messagingRoutes);
 app.use('/insurance', insuranceRoutes);
+app.use('/voice', voiceRoutes);
 
 const PORT = process.env.PORT || 8000;
 

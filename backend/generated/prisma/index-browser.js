@@ -205,6 +205,32 @@ exports.Prisma.PatientScalarFieldEnum = {
   registrationDate: 'registrationDate'
 };
 
+exports.Prisma.PatientHealthScoreScalarFieldEnum = {
+  id: 'id',
+  patientId: 'patientId',
+  score: 'score',
+  riskLevel: 'riskLevel',
+  suggestions: 'suggestions',
+  breakdown: 'breakdown',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ClaimScalarFieldEnum = {
+  id: 'id',
+  patientId: 'patientId',
+  admissionId: 'admissionId',
+  insuranceProvider: 'insuranceProvider',
+  policyNumber: 'policyNumber',
+  tpaId: 'tpaId',
+  status: 'status',
+  estimatedCost: 'estimatedCost',
+  sanctionedAmount: 'sanctionedAmount',
+  finalBillAmount: 'finalBillAmount',
+  documents: 'documents',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.MedicalHistoryScalarFieldEnum = {
   id: 'id',
   patientId: 'patientId',
@@ -473,12 +499,28 @@ exports.Prisma.PatientVitalScalarFieldEnum = {
   notes: 'notes'
 };
 
+exports.Prisma.EmergencyRequestScalarFieldEnum = {
+  id: 'id',
+  patientName: 'patientName',
+  severity: 'severity',
+  location: 'location',
+  notes: 'notes',
+  timestamp: 'timestamp',
+  status: 'status',
+  assignedOtRoom: 'assignedOtRoom'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
 };
 
 exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
   JsonNull: Prisma.JsonNull
 };
 
@@ -525,6 +567,17 @@ exports.BedStatus = exports.$Enums.BedStatus = {
   Occupied: 'Occupied',
   Cleaning: 'Cleaning',
   Maintenance: 'Maintenance'
+};
+
+exports.ClaimStatus = exports.$Enums.ClaimStatus = {
+  INITIATED: 'INITIATED',
+  DOCS_UPLOADED: 'DOCS_UPLOADED',
+  PRE_AUTH_PENDING: 'PRE_AUTH_PENDING',
+  PRE_AUTH_APPROVED: 'PRE_AUTH_APPROVED',
+  PRE_AUTH_REJECTED: 'PRE_AUTH_REJECTED',
+  ENHANCEMENT_PENDING: 'ENHANCEMENT_PENDING',
+  FINAL_AUTH_PENDING: 'FINAL_AUTH_PENDING',
+  SETTLED: 'SETTLED'
 };
 
 exports.AppointmentStatus = exports.$Enums.AppointmentStatus = {
@@ -637,13 +690,6 @@ exports.InvoiceStatus = exports.$Enums.InvoiceStatus = {
   Paid: 'Paid'
 };
 
-exports.ClaimStatus = exports.$Enums.ClaimStatus = {
-  Submitted: 'Submitted',
-  QueryRaised: 'QueryRaised',
-  Approved: 'Approved',
-  Rejected: 'Rejected'
-};
-
 exports.Prisma.ModelName = {
   User: 'User',
   StaffProfile: 'StaffProfile',
@@ -652,6 +698,8 @@ exports.Prisma.ModelName = {
   Ward: 'Ward',
   Bed: 'Bed',
   Patient: 'Patient',
+  PatientHealthScore: 'PatientHealthScore',
+  Claim: 'Claim',
   MedicalHistory: 'MedicalHistory',
   PatientDocument: 'PatientDocument',
   Appointment: 'Appointment',
@@ -675,7 +723,8 @@ exports.Prisma.ModelName = {
   Invoice: 'Invoice',
   InvoiceItem: 'InvoiceItem',
   InsuranceClaim: 'InsuranceClaim',
-  PatientVital: 'PatientVital'
+  PatientVital: 'PatientVital',
+  EmergencyRequest: 'EmergencyRequest'
 };
 
 /**

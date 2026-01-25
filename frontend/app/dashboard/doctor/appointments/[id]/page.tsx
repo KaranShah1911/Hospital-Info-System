@@ -10,6 +10,7 @@ import { VisitHistory } from '@/components/appointments/VisitHistory';
 import { ClinicalNoteForm } from '@/components/appointments/ClinicalNoteForm';
 import { PrescriptionForm } from '@/components/appointments/PrescriptionForm';
 import { LabOrderForm } from '@/components/appointments/LabOrderForm';
+import { VitalsUpdateForm } from '@/components/appointments/VitalsUpdateForm';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -117,6 +118,15 @@ export default function ConsultationPage() {
                                 />
 
 
+                            },
+                            {
+                                id: 'vitals',
+                                label: 'Vitals',
+                                content: <VitalsUpdateForm
+                                    patientId={data.patient.id}
+                                    visitId={data.visitId}
+                                    onSuccess={fetchDetails}
+                                />
                             }
                         ]} />
                     </div>
