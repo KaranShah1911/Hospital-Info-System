@@ -8,6 +8,5 @@ router.post('/register', authenticateToken, registerPatient);
 router.get('/search', authenticateToken, searchPatient);
 router.get('/suggestions', authenticateToken, searchPatientSuggestions);
 
-router.get('/suggestions', authenticateToken, searchPatientSuggestions);
 router.get('/search-for-emr', searchPatientForEMR);
 export default router;

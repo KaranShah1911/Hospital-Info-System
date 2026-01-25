@@ -25,130 +25,95 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Get Pending Lab Orders (With Filter Support)
 export const getLabWorklist = async (req, res) => {
     try {
-        // 1. Extract query params
         const { category } = req.query;
 
-        // 2. Build the filter object dynamically
+        // Statuses relevant for Lab Worklist
         const filterCriteria = {
-            status: {
-                in: ['Ordered', 'SampleCollected']
-            }
+            status: { in: ['Ordered', 'SampleCollected'] }
         };
 
-        // 4. If a Category is requested (e.g. 'Lab', 'Radiology')
+        
         if (category) {
-            filterCriteria.service = {
-                category: category
-            };
+            filterCriteria.service = { category: category };
         }
+
+        console.log("category", category)
 
         const orders = await prisma.serviceOrder.findMany({
             where: filterCriteria,
             include: {
                 patient: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        uhid: true,
-                        gender: true,
-                        dob: true
-                    }
+                    select: { firstName: true, lastName: true, uhid: true, gender: true, dob: true }
                 },
-                doctor: {
-                    select: { fullName: true }
-                },
-                service: {
-                    select: { name: true, code: true, category: true }
-                }
+                doctor: { select: { fullName: true } },
+                service: { select: { name: true, category: true } },
+                labResults: { orderBy: { resultDate: 'desc' }, take: 1 } // Get latest result if any (re-test case)
             },
-            orderBy: { orderDate: 'asc' } // Good practice to order by date
+            orderBy: { orderDate: 'asc' }
         });
 
         res.status(200).json(new ApiResponse(200, orders, "Pending orders fetched"));
     } catch (error) {
-        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+        console.error("Lab Worklist Error:", error);
+        res.status(500).json(new ApiError(500, error.message));
     }
 };
 
 export const submitLabResult = async (req, res) => {
     try {
-        const { testName, serviceOrderId, resultValue, serviceId } = req.body;
+        const { testName, serviceOrderId, resultValue, serviceId, referenceRange, unit, remarks } = req.body;
 
         const result = await prisma.$transaction(async (tx) => {
             // 1. Create Result
+            // Note: Schema has `resultValue`, `testName`, `serviceOrderId`. 
+            // It also has `referenceRange` and `unit` (I saw nullable in schema).
+            // `technicianId` is user.id.
+            
             const labResult = await tx.labResult.create({
                 data: {
                     serviceOrderId,
-                    resultValue,
-                    technicianId: req.user.userId,
-                    testName: testName
+                    testName,
+                    resultValue: remarks ? `${resultValue} (Note: ${remarks})` : resultValue,
+                    referenceRange: referenceRange || null,
+                    unit: unit || null,
+                    technicianId: req.user?.userId || null 
                 }
             });
 
             // 2. Update Order Status
-            const order = await tx.serviceOrder.update({
+            await tx.serviceOrder.update({
                 where: { id: serviceOrderId },
-                data: { status: 'ResultAvailable' },
-                include: { service: true, visit: true } // Need price and visitId
+                data: { status: 'ResultAvailable' }
             });
-            
-            // as per darshit , ye last mai hoga
-            // // 3. Billing Trigger
-            // if (order.visitId) {
-            //     // Find or Create Draft Invoice
-            //     let invoice = await tx.invoice.findFirst({
-            //         where: {
-            //             visitId: order.visitId,
-            //             status: 'Draft'
-            //         }
-            //     });
-
-            //     if (!invoice) {
-            //         invoice = await tx.invoice.create({
-            //             data: {
-            //                 patientId: order.patientId,
-            //                 visitId: order.visitId,
-            //                 status: 'Draft',
-            //                 totalAmount: 0,
-            //                 taxAmount: 0,
-            //                 discountAmount: 0,
-            //                 netAmount: 0
-            //             }
-            //         });
-            //     }
-
-            //     // Add Line Item
-            //     await tx.invoiceItem.create({
-            //         data: {
-            //             invoiceId: invoice.id,
-            //             serviceId: order.serviceId,
-            //             serviceOrderId: order.id,
-            //             itemName: order.service.name,
-            //             quantity: 1,
-            //             unitPrice: order.service.basePrice,
-            //             total: order.service.basePrice
-            //         }
-            //     });
-
-            //     // Update Invoice Totals
-            //     // note: simpler to just increment, but for correctness we should sum? 
-            //     // For now, simple increment logic:
-            //     const newTotal = Number(invoice.totalAmount) + Number(order.service.basePrice);
-            //     await tx.invoice.update({
-            //         where: { id: invoice.id },
-            //         data: {
-            //             totalAmount: newTotal,
-            //             netAmount: newTotal // neglecting tax for now
-            //         }
-            //     });
-            // }
 
             return labResult;
         });
 
-        res.status(201).json(result);
+        res.status(201).json(new ApiResponse(201, result, "Result submitted successfully"));
     } catch (error) {
         console.error("Lab Submit Error:", error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json(new ApiError(500, error.message));
+    }
+};
+
+export const updateOrderStatus = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['Ordered', 'SampleCollected', 'ResultAvailable', 'Completed'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json(new ApiError(400, "Invalid status"));
+        }
+
+        const updatedOrder = await prisma.serviceOrder.update({
+            where: { id: orderId },
+            data: { status },
+            include: { service: { select: { name: true } } }
+        });
+
+        res.status(200).json(new ApiResponse(200, updatedOrder, `Order updated to ${status}`));
+    } catch (error) {
+        res.status(500).json(new ApiError(500, error.message));
     }
 };

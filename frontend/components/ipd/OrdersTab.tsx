@@ -1,17 +1,113 @@
 "use client";
 
-import React from 'react';
-import { Utensils, ClipboardList, AlertTriangle, History, CheckCircle, TestTube } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Utensils, ClipboardList, AlertTriangle, History, CheckCircle, TestTube, ShoppingCart } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/section-header';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
-export function OrdersTab() {
+interface OrdersTabProps {
+    admissionId?: string;
+    patientId?: string;
+}
+
+export function OrdersTab({ admissionId, patientId }: OrdersTabProps) {
+    // Services State
+    const [labServices, setLabServices] = useState<any[]>([]);
+    const [radServices, setRadServices] = useState<any[]>([]);
+    const [loadingServices, setLoadingServices] = useState(true);
+
+    // Selection State
+    const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+    const [placingOrder, setPlacingOrder] = useState(false);
+
+    // History State
+    const [orderHistory, setOrderHistory] = useState<any[]>([]);
+
+    // ------------------------------------------
+    // DATA FETCHING
+    // ------------------------------------------
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                // Fetch Labs
+                const labs = await api.get('/master/services?category=Lab');
+                setLabServices(labs.data || []);
+
+                // Fetch Radiology
+                const rads = await api.get('/master/services?category=Radiology');
+                setRadServices(rads.data || []);
+            } catch (error) {
+                console.error("Failed to fetch services", error);
+            } finally {
+                setLoadingServices(false);
+            }
+        };
+
+        fetchServices();
+        fetchOrderHistory();
+    }, [admissionId]);
+
+    const fetchOrderHistory = async () => {
+        if (!admissionId) return;
+        try {
+            const res = await api.get(`/orders/admission/${admissionId}`);
+            setOrderHistory(res.data.data || []);
+        } catch (error) {
+            console.error("Failed to fetch order history", error);
+        }
+    };
+
+    // ------------------------------------------
+    // HANDLERS
+    // ------------------------------------------
+    const toggleService = (id: string) => {
+        const next = new Set(selectedServiceIds);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        setSelectedServiceIds(next);
+    };
+
+    const handlePlaceOrder = async () => {
+        if (!admissionId || !patientId) {
+            toast.error("Missing patient context");
+            return;
+        }
+        if (selectedServiceIds.size === 0) {
+            toast.error("Please select at least one test");
+            return;
+        }
+
+        setPlacingOrder(true);
+        try {
+            await api.post('/orders/batch-create', {
+                patientId,
+                admissionId,
+                serviceIds: Array.from(selectedServiceIds),
+                clinicalIndication: "Routine Admission Order"
+            });
+            toast.success("Orders placed successfully");
+            setSelectedServiceIds(new Set()); // Clear selection
+            fetchOrderHistory(); // Refresh history
+        } catch (error) {
+            console.error("Order failed", error);
+            toast.error("Failed to place order");
+        } finally {
+            setPlacingOrder(false);
+        }
+    };
+
+
+    // ------------------------------------------
+    // NURSING TASKS (Local State for Demo)
+    // ------------------------------------------
     const [tasks, setTasks] = React.useState<{ id: string, name: string, freq: string, start: string, instructions: string, status: 'active' | 'completed', completedBy?: string, completedAt?: string }[]>([
         { id: '1', name: 'Check BP', freq: '2 Hourly', start: 'Now', instructions: 'Notify if > 140/90', status: 'active' },
-        { id: '2', name: 'Insulin 10U', freq: 'Before Lunch', start: 'Today', instructions: '', status: 'active' },
-        { id: '3', name: 'Morning Vitals', freq: 'Once', start: '08:00 AM', instructions: '', status: 'completed', completedBy: 'Nurse Sarah', completedAt: 'Today, 08:15 AM' },
-        { id: '4', name: 'Sponge Bath', freq: 'Once', start: '07:00 AM', instructions: '', status: 'completed', completedBy: 'Nurse Sarah', completedAt: 'Today, 07:30 AM' }
+        { id: '2', name: 'Insulin 10U', freq: 'Before Lunch', start: 'Today', instructions: '', status: 'active' }
     ]);
-
     const [newTask, setNewTask] = React.useState({ name: '', freq: 'Once', start: 'Now', instructions: '' });
 
     const handleAddTask = (e: React.FormEvent) => {
@@ -21,26 +117,104 @@ export function OrdersTab() {
         setNewTask({ name: '', freq: 'Once', start: 'Now', instructions: '' });
     };
 
-    const LAB_TESTS = [
-        'Complete Blood Count (CBC)', 'Lipid Profile', 'Liver Function Test (LFT)', 'Renal Function Test (RFT)',
-        'Thyroid Profile (T3, T4, TSH)', 'HbA1c', 'Blood Sugar Fasting', 'Blood Sugar PP',
-        'Urine Routine & Microscopy', 'Stool Routine', 'Serum Electrolytes', 'Serum Calcium',
-        'Vitamin D Total', 'Vitamin B12', 'Iron Studies', 'C-Reactive Protein (CRP)',
-        'Erythrocyte Sedimentation Rate', 'Prothrombin Time (PT/INR)', 'APTT', 'D-Dimer',
-        'Typhoid Widal Test', 'Dengue NS1 Antigen', 'Malaria Antigen', 'HIV 1 & 2 Antibody', 'HBsAg'
-    ];
-
-    const RADIOLOGY_TESTS = [
-        'X-Ray Chest PA View', 'X-Ray Knee AP/Lat', 'X-Ray LS Spine', 'X-Ray Abdomen Erect',
-        'USG Abdomen & Pelvis', 'USG KUB', 'USG Obstetric', 'USG Thyroid / Neck',
-        'USG Doppler Carotid', 'USG Doppler Lower Limb', 'CT Brain Plain', 'CT Chest HRCT',
-        'CT Abdomen Contrast', 'CT KUB', 'MRI Brain', 'MRI Cervical Spine',
-        'MRI Lumbar Spine', 'MRI Knee Joint', 'Mammography', 'DEXA Scan (Bone Density)',
-        '2D ECHO Cardiography', 'ECG (12 Lead)', 'TMT (Treadmill Test)', 'Holter Monitoring', 'PET-CT Whole Body'
-    ];
-
     return (
         <div className="space-y-8">
+            {/* 1. CPOE - Lab & Radiology */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
+                <div className="flex justify-between items-center mb-6">
+                    <SectionHeader icon={TestTube} title="Laboratory & Radiology Orders" iconClassName="text-indigo-500" />
+                    {selectedServiceIds.size > 0 && (
+                        <span className="px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-full text-sm">
+                            {selectedServiceIds.size} Selected
+                        </span>
+                    )}
+                </div>
+
+                <div className="space-y-8">
+                    {/* Labs */}
+                    <div>
+                        <h4 className="flex items-center gap-2 font-black text-slate-800 mb-4">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            Lab Investigations
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                            {loadingServices && <div className="text-sm text-slate-400">Loading services...</div>}
+                            {!loadingServices && labServices.length === 0 && <div className="text-sm text-slate-400">No lab services found.</div>}
+
+                            {labServices.map(service => (
+                                <div key={service.id} onClick={() => toggleService(service.id)} className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${selectedServiceIds.has(service.id) ? 'bg-indigo-50 border-indigo-500' : 'bg-slate-50 border-slate-100 hover:border-indigo-300'}`}>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedServiceIds.has(service.id) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                                            {selectedServiceIds.has(service.id) && <CheckCircle size={10} className="text-white" />}
+                                        </div>
+                                        <span className={`text-xs font-bold leading-tight ${selectedServiceIds.has(service.id) ? 'text-indigo-900' : 'text-slate-700'}`}>{service.name}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Radiology */}
+                    <div>
+                        <h4 className="flex items-center gap-2 font-black text-slate-800 mb-4">
+                            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                            Radiology & Imaging
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                            {loadingServices && <div className="text-sm text-slate-400">Loading services...</div>}
+                            {!loadingServices && radServices.length === 0 && <div className="text-sm text-slate-400">No radiology services found.</div>}
+
+                            {radServices.map(service => (
+                                <div key={service.id} onClick={() => toggleService(service.id)} className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${selectedServiceIds.has(service.id) ? 'bg-rose-50 border-rose-500' : 'bg-slate-50 border-slate-100 hover:border-rose-300'}`}>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedServiceIds.has(service.id) ? 'bg-rose-600 border-rose-600' : 'border-gray-300'}`}>
+                                            {selectedServiceIds.has(service.id) && <CheckCircle size={10} className="text-white" />}
+                                        </div>
+                                        <span className={`text-xs font-bold leading-tight ${selectedServiceIds.has(service.id) ? 'text-rose-900' : 'text-slate-700'}`}>{service.name}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-4 border-t border-slate-100">
+                        <button onClick={handlePlaceOrder} disabled={placingOrder} className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-lg disabled:opacity-50">
+                            {placingOrder ? 'Processing...' : 'Sign & Place Orders'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* 2. Order History */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
+                <SectionHeader icon={History} title="Active Clinical Orders History" iconClassName="text-slate-500" />
+                <div className="mt-6">
+                    {orderHistory.length === 0 ? (
+                        <p className="text-slate-400 text-sm">No orders placed yet.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {orderHistory.map((order) => (
+                                <div key={order.id} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-full ${order.service?.category === 'Lab' ? 'bg-indigo-100 text-indigo-600' : 'bg-rose-100 text-rose-600'}`}>
+                                            <div className="w-2 h-2 rounded-full bg-current"></div>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-800 text-sm">{order.service?.name || "Unknown Service"}</div>
+                                            <div className="text-xs font-bold text-slate-400">
+                                                Ordered by {order.doctor?.fullName || 'Doctor'} • {new Date(order.orderDate).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full uppercase tracking-wider">{order.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 3. Nursing Tasks (Interactive) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* 1. Dietary Orders */}
                 <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
@@ -138,85 +312,6 @@ export function OrdersTab() {
                 </div>
             </div>
 
-            {/* Task History Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
-                <SectionHeader icon={History} title="Completed Nursing Tasks History" iconClassName="text-slate-500" />
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {tasks.filter(t => t.status === 'completed').map((task) => (
-                        <div key={task.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between opacity-70 hover:opacity-100 transition-opacity">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-full">
-                                    <CheckCircle size={16} />
-                                </div>
-                                <div>
-                                    <div className="font-bold text-slate-700 text-sm strike-through decoration-slate-400">{task.name}</div>
-                                    <div className="text-xs font-bold text-slate-400">Completed by {task.completedBy} • {task.completedAt}</div>
-                                </div>
-                            </div>
-                            <div className="text-[10px] font-black uppercase text-slate-300 bg-white px-2 py-1 rounded-lg border border-slate-100">{task.freq}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 3. Lab & Radiology (CPOE) */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
-                <SectionHeader icon={TestTube} title="Laboratory & Radiology Orders" iconClassName="text-indigo-500" />
-
-                <div className="mt-6 space-y-8">
-                    {/* Labs */}
-                    <div>
-                        <h4 className="flex items-center gap-2 font-black text-slate-800 mb-4">
-                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                            Lab Investigations
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                            {LAB_TESTS.map(test => (
-                                <div key={test} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-300 transition-all group">
-                                    <label className="flex items-center gap-3 cursor-pointer flex-1">
-                                        <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300" />
-                                        <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 leading-tight">{test}</span>
-                                    </label>
-                                    <select className="ml-2 text-[10px] font-bold bg-white text-slate-500 border border-slate-200 rounded-lg focus:ring-0 cursor-pointer py-1 px-2">
-                                        <option>Routine</option>
-                                        <option className="text-amber-600">Urgent</option>
-                                        <option className="text-red-600">Stat</option>
-                                    </select>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Radiology */}
-                    <div>
-                        <h4 className="flex items-center gap-2 font-black text-slate-800 mb-4">
-                            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                            Radiology & Imaging
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                            {RADIOLOGY_TESTS.map(test => (
-                                <div key={test} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-rose-300 transition-all group">
-                                    <label className="flex items-center gap-3 cursor-pointer flex-1">
-                                        <input type="checkbox" className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-gray-300" />
-                                        <span className="text-xs font-bold text-slate-700 group-hover:text-rose-700 leading-tight">{test}</span>
-                                    </label>
-                                    <select className="ml-2 text-[10px] font-bold bg-white text-slate-500 border border-slate-200 rounded-lg focus:ring-0 cursor-pointer py-1 px-2">
-                                        <option>Routine</option>
-                                        <option className="text-amber-600">Urgent</option>
-                                        <option className="text-red-600">Stat</option>
-                                    </select>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end pt-4 border-t border-slate-100">
-                        <button className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-lg">
-                            Sign & Place Orders
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     )
 }

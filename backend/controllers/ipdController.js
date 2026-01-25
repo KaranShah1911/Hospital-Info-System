@@ -6,12 +6,47 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 // Logic: Admits a patient, creating an Admission record.
 export const admitPatient = async (req, res) => {
     try {
-        const { patientId, departmentId, admissionType, reasonForAdmission, visitId, bedId } = req.body;
+        const { 
+            patientId, departmentId, admissionType, reasonForAdmission, visitId, bedId, admittingDoctorId,
+            // Demographic Updates
+            abhaId, insuranceProvider, policyNumber, idProofType, idProofNumber,
+            currentAddress, permanentAddress, city, state, pincode,
+            email, phone, emergencyContactName, emergencyContactPhone, emergencyContactRelation,
+            defaultPayerType, maritalStatus, nationality
+        } = req.body;
 
-        const admittingDoctorId = req.user.staffId;
+        const actualAdmittingDoctorId = admittingDoctorId || req.user.staffId;
         // bedId = Optional initial bed selection
 
         const result = await prisma.$transaction(async (tx) => {
+            // 0. Update Patient Demographics (if provided)
+            if (patientId) {
+                await tx.patient.update({
+                    where: { id: patientId },
+                    data: {
+                        abhaId, insuranceProvider, policyNumber, idProofType, idProofNumber,
+                        currentAddress, permanentAddress, city, state, pincode,
+                        email, phone, emergencyContactName, emergencyContactPhone, emergencyContactRelation, // Relation added
+                        defaultPayerType, maritalStatus, nationality
+                        // Note: We avoid updating Name/DOB/Gender here to prevent major identity shifts without proper authorization 
+                        // unless explicitly requested, but for now we trust the receptionist.
+                    }
+                });
+            }
+
+            // 0a. Validate/Fetch Department from Doctor (Source of Truth)
+            // We rely on the doctor's current department to ensure FK consistency.
+            const doctorProfile = await tx.staffProfile.findUnique({
+                where: { id: actualAdmittingDoctorId }
+            });
+            
+            if (!doctorProfile || !doctorProfile.departmentId) {
+                throw new ApiError(400, "Admitting doctor is not assigned to any department.");
+            }
+            
+            // Use the authoritative department ID from the doctor's profile
+            const verifiedDepartmentId = doctorProfile.departmentId;
+
             let currentBedId = null;
 
             // Bed Validation Logic
@@ -37,8 +72,8 @@ export const admitPatient = async (req, res) => {
             const admission = await tx.admission.create({
                 data: {
                     patientId,
-                    admittingDoctorId,
-                    departmentId,
+                    admittingDoctorId: actualAdmittingDoctorId,
+                    departmentId: verifiedDepartmentId,
                     visitId: visitId || null,
                     currentBedId, // Link active bed
                     admissionType: admissionType || "Emergency",
@@ -117,6 +152,47 @@ export const getAdmissions = async (req, res) => {
 // Handles Bed Allocation/Transfer - Track 2 Step 3
 // Logic: Allocates a bed to an admission and updates the bed status to Occupied.
 // Uses a transaction to ensure data integrity.
+
+// Get Single Admission Details
+export const getAdmissionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const admission = await prisma.admission.findUnique({
+            where: { id },
+            include: {
+                patient: true, // Fetch full patient profile
+                currentBed: {
+                    include: { ward: true }
+                },
+                admittingDoctor: {
+                    select: { fullName: true }
+                }
+            }
+        });
+
+        if (!admission) {
+            throw new ApiError(404, "Admission not found");
+        }
+
+        // Compute Age
+        const age = admission.patient.dob 
+            ? new Date().getFullYear() - new Date(admission.patient.dob).getFullYear() 
+            : 'N/A';
+
+        const result = {
+            ...admission,
+            patient: {
+                ...admission.patient,
+                age
+            }
+        };
+
+        res.status(200).json(new ApiResponse(200, result, "Admission details fetched"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
 
 export const transferBed = async (req, res) => {
     try {
@@ -452,6 +528,69 @@ export const updateChecklistItem = async (req, res) => {
         }
 
         res.status(200).json(new ApiResponse(200, item, "Checklist item updated"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+// ==========================================
+// CLINICAL NOTES (IPD)
+// ==========================================
+
+export const addProgressNote = async (req, res) => {
+    try {
+        console.log("Adding Progress Note:", req.body);
+        console.log("By User:", req.user);
+
+        const { admissionId, content, noteType } = req.body; // content: { S, O, A, P }
+
+        if (!admissionId || !content) {
+             throw new ApiError(400, "Admission ID and Content are required");
+        }
+
+        // Get admission to find patient
+        const admission = await prisma.admission.findUnique({ where: { id: admissionId } });
+        if (!admission) throw new ApiError(404, "Admission not found with ID: " + admissionId);
+
+        if (!req.user.staffId) {
+             console.error("Missing staffId for user:", req.user);
+             throw new ApiError(400, "User must have a linked Staff Profile to create notes");
+        }
+
+        const note = await prisma.clinicalNote.create({
+            data: {
+                patientId: admission.patientId,
+                admissionId,
+                doctorId: req.user.staffId,
+                noteType: noteType || "ProgressNote",
+                content, // JSON
+                isFinalized: true
+            },
+            include: {
+                doctor: { select: { fullName: true } }
+            }
+        });
+
+        res.status(201).json(new ApiResponse(201, note, "Progress note added"));
+    } catch (error) {
+        console.error("Add Note Error:", error);
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
+
+export const getAdmissionNotes = async (req, res) => {
+    try {
+        const { id } = req.params; // Admission ID
+
+        const notes = await prisma.clinicalNote.findMany({
+            where: { admissionId: id },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                doctor: { select: { fullName: true } }
+            }
+        });
+
+        res.status(200).json(new ApiResponse(200, notes, "Admission notes fetched"));
     } catch (error) {
         res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }

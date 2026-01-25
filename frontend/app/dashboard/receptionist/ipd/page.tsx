@@ -68,7 +68,12 @@ interface AdmissionFormData extends Partial<Patient> {
     departmentId: string; // derived from doctor
 }
 
+
+import { useSearchParams } from 'next/navigation';
+
 const ReceptionistIPDAdmit: React.FC = () => {
+    const searchParams = useSearchParams();
+
     const [searchQuery, setSearchQuery] = useState('');
     const [isExistingPatient, setIsExistingPatient] = useState(false);
     const [ageInput, setAgeInput] = useState<string>('');
@@ -122,8 +127,6 @@ const ReceptionistIPDAdmit: React.FC = () => {
             try {
                 const [bedsRes, docsRes] = await Promise.all([
                     api.get('/facility/beds/available'),
-
-                    
                     api.get('/master/users/doctors')
                 ]);
                 setAvailableBeds(bedsRes.data.data || []);
@@ -135,6 +138,53 @@ const ReceptionistIPDAdmit: React.FC = () => {
         };
         fetchResources();
     }, []);
+
+    // Handle URL param population
+    useEffect(() => {
+        const uhid = searchParams.get('uhid');
+        const fetchPatientFromUrl = async () => {
+            if (uhid) {
+                setLoading(true);
+                try {
+                    // Reuse the search logic 
+                    const res = await api.get(`/patients/search?uhid=${uhid}`);
+                    // Search returns array for partial matches, check if we have results
+                    const results = Array.isArray(res.data) ? res.data : [res.data];
+                    const patient = results.find((p: any) => p.uhid === uhid) || results[0];
+
+                    if (patient) {
+                        setPatientId(patient.id);
+                        setFormData(prev => ({
+                            ...prev,
+                            ...patient,
+                            // Preserve admission specific fields
+                            bedId: prev.bedId,
+                            attendingDoctor: prev.attendingDoctor,
+                            reasonForAdmission: prev.reasonForAdmission,
+                            admissionType: prev.admissionType
+                        }));
+
+                        if (patient.dob) {
+                            const birthYear = new Date(patient.dob).getFullYear();
+                            setAgeInput((new Date().getFullYear() - birthYear).toString());
+                        }
+                        setIsExistingPatient(true);
+                        setMessage({ text: 'Patient details retrieved from link.', type: 'success' });
+
+                        // Clear message after delay
+                        setTimeout(() => setMessage(null), 3000);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    toast.error("Failed to fetch patient details");
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+        fetchPatientFromUrl();
+    }, [searchParams]);
+
 
     // Age to DOB logic
     useEffect(() => {
@@ -205,7 +255,10 @@ const ReceptionistIPDAdmit: React.FC = () => {
                 departmentId: departmentId,
                 bedId: formData.bedId,
                 admissionType: formData.admissionType,
-                reasonForAdmission: formData.reasonForAdmission || "Observation"
+                reasonForAdmission: formData.reasonForAdmission || "Observation",
+
+                // Spread all other form data for updates
+                ...formData
             };
 
             await api.post('/ipd', payload);
@@ -236,10 +289,34 @@ const ReceptionistIPDAdmit: React.FC = () => {
         </h3>
     );
 
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+
+    const handleSuggestionClick = (p: any) => {
+        setSearchQuery(p.uhid);
+        setSuggestions([]);
+        setPatientId(p.id);
+        setFormData(prev => ({
+            ...prev,
+            ...p,
+            bedId: prev.bedId,
+            attendingDoctor: prev.attendingDoctor,
+            reasonForAdmission: prev.reasonForAdmission,
+            admissionType: prev.admissionType
+        }));
+
+        if (p.dob) {
+            const birthYear = new Date(p.dob).getFullYear();
+            setAgeInput((new Date().getFullYear() - birthYear).toString());
+        }
+        setIsExistingPatient(true);
+        setMessage({ text: 'Patient details retrieved.', type: 'success' });
+        setTimeout(() => setMessage(null), 3000);
+    };
+
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
             {/* UHID Search Bar */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
+            <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 overflow-visible relative z-50">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Master Patient Index (MPI) Lookup</label>
                 <div className="flex gap-4">
                     <div className="relative flex-1">
@@ -247,11 +324,41 @@ const ReceptionistIPDAdmit: React.FC = () => {
                         <input
                             type="text"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSearchQuery(val);
+                                if (val.length > 2) {
+                                    api.get(`/patients/suggestions?query=${val}`).then(res => {
+                                        setSuggestions(res.data || []);
+                                    }).catch(() => setSuggestions([]));
+                                } else {
+                                    setSuggestions([]);
+                                }
+                            }}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            placeholder="Enter UHID to fetch existing patient data..."
+                            placeholder="Type Name, UHID or Phone to search..."
                             className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl text-lg font-bold outline-none focus:ring-4 focus:ring-emerald-600/10 focus:border-emerald-600 transition-all text-slate-800"
                         />
+                        {suggestions.length > 0 && searchQuery.length > 2 && (
+                            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 max-h-80 overflow-auto z-[100]">
+                                {suggestions.map((p: any) => (
+                                    <div key={p.id} className="p-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer flex justify-between items-center transition-colors"
+                                        onClick={() => handleSuggestionClick(p)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-black">
+                                                {p.firstName[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-base">{p.firstName} {p.lastName}</p>
+                                                <p className="text-xs text-slate-500 font-bold">{p.uhid} • {p.phone}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg uppercase tracking-wider">SELECT</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <button onClick={handleSearch} disabled={loading} className="px-10 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-xl hover:bg-emerald-700 transition-all cursor-pointer disabled:opacity-50">
                         {loading ? 'Fetching...' : 'Fetch & Populate'}
@@ -277,33 +384,105 @@ const ReceptionistIPDAdmit: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">First Name</label>
-                        <input readOnly={isExistingPatient} type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-600 outline-none font-bold text-slate-800" />
+                        <input readOnly={isExistingPatient} type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} className={`w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800 ${isExistingPatient ? 'bg-slate-100' : 'bg-white'}`} />
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Middle Name</label>
-                        <input readOnly={isExistingPatient} type="text" value={formData.middleName} onChange={e => setFormData({ ...formData, middleName: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800" />
+                        <input type="text" value={formData.middleName} onChange={e => setFormData({ ...formData, middleName: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800 bg-white" />
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Last Name</label>
-                        <input readOnly={isExistingPatient} type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800" />
+                        <input readOnly={isExistingPatient} type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} className={`w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800 ${isExistingPatient ? 'bg-slate-100' : 'bg-white'}`} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Age</label>
-                            <input readOnly={isExistingPatient} type="number" value={ageInput} onChange={e => setAgeInput(e.target.value)} className="w-full px-4 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800" />
+                            <input type="number" value={ageInput} onChange={e => setAgeInput(e.target.value)} className="w-full px-4 py-4 rounded-2xl border border-slate-200 outline-none font-bold text-slate-800 bg-white" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Gender</label>
-                            <select disabled={isExistingPatient} value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
+                            <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full px-4 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
                                 <option>Male</option><option>Female</option><option>Other</option>
                             </select>
                         </div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Date of Birth</label>
-                        <input readOnly={isExistingPatient} type="date" value={formData.dob ? new Date(formData.dob).toISOString().split('T')[0] : ''} onChange={e => setFormData({ ...formData, dob: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800" />
+                        <input type="date" value={formData.dob ? new Date(formData.dob).toISOString().split('T')[0] : ''} onChange={e => setFormData({ ...formData, dob: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
                     </div>
-                    {/* ... Other fields omitted for brevity but should map similarly if needed. Assuming focus is on Admission details now. */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Marital Status</label>
+                        <select value={formData.maritalStatus} onChange={e => setFormData({ ...formData, maritalStatus: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
+                            <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* 2. Contact & Address */}
+                <SectionHeader icon={Home} title="Contact Information" color="text-emerald-600" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Phone Number</label>
+                        <input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email Address</label>
+                        <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Address</label>
+                        <input type="text" value={formData.currentAddress} onChange={e => setFormData({ ...formData, currentAddress: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">City</label>
+                        <input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pincode</label>
+                        <input type="text" value={formData.pincode} onChange={e => setFormData({ ...formData, pincode: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Permanent Address</label>
+                        <input type="text" value={formData.permanentAddress} onChange={e => setFormData({ ...formData, permanentAddress: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                </div>
+
+                {/* 3. Identity & Insurance */}
+                <SectionHeader icon={IdCard} title="Identity & Payer" color="text-purple-600" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ABHA ID (Health ID)</label>
+                        <input type="text" value={formData.abhaId || ''} onChange={e => setFormData({ ...formData, abhaId: e.target.value })} placeholder="xx-xxxx-xxxx-xxxx" className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ID Proof Type</label>
+                        <select value={formData.idProofType} onChange={e => setFormData({ ...formData, idProofType: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
+                            <option>Aadhar</option><option>PAN</option><option>Driving License</option><option>Passport</option>
+                        </select>
+                    </div>
+                    <div className="space-y-2 lg:col-span-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ID Number</label>
+                        <input type="text" value={formData.idProofNumber || ''} onChange={e => setFormData({ ...formData, idProofNumber: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Payer Type</label>
+                        <select value={formData.defaultPayerType} onChange={e => setFormData({ ...formData, defaultPayerType: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
+                            <option>Self Pay</option><option>Insurance</option><option>Govt Scheme</option><option>Corporate</option>
+                        </select>
+                    </div>
+                    {formData.defaultPayerType !== 'Self Pay' && (
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Insurance Provider</label>
+                                <input type="text" value={formData.insuranceProvider || ''} onChange={e => setFormData({ ...formData, insuranceProvider: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                            </div>
+                            <div className="space-y-2 lg:col-span-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Policy Number</label>
+                                <input type="text" value={formData.policyNumber || ''} onChange={e => setFormData({ ...formData, policyNumber: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none text-slate-800 bg-white" />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* 6. Admission Assignment */}
@@ -313,7 +492,7 @@ const ReceptionistIPDAdmit: React.FC = () => {
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Admission Type</label>
                         <select value={formData.admissionType} onChange={e => setFormData({ ...formData, admissionType: e.target.value })} className="w-full px-5 py-4 rounded-2xl border border-slate-200 font-bold outline-none bg-white text-slate-800">
                             <option>Emergency</option>
-                            <option>Elective</option>
+                            <option value="Planned">Elective (Planned)</option>
                             <option>Transfer</option>
                         </select>
                     </div>

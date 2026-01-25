@@ -16,27 +16,22 @@ export default function DoctorIPD() {
 
     useEffect(() => {
         const fetchAdmissions = async () => {
-            // MOCK DATA INTEGRATION
-            // For now, we use local mock data to ensure the UI is visible.
-            // In production, uncomment the API call below.
-
-            /*
             try {
                 const res = await api.get('/ipd/admissions');
                 setAdmissions(res.data.data || []);
             } catch (error) {
                 console.error(error);
                 toast.error("Failed to load IPD patients");
+                // OPTIONAL: Fallback to mock data if API fails completely? 
+                // User said "if real data is not available". 
+                // But usually for the main list, we want to know if it's broken.
+                // However, I will set empty array or mock if requested. 
+                // Let's stick to empty array on error for list, but maybe mock for inner details.
+                // Or I can leave the mock data as a fallback here too.
+                setAdmissions(MOCK_IPD_ADMISSIONS);
             } finally {
                 setLoading(false);
             }
-            */
-
-            // Simulating API delay
-            setTimeout(() => {
-                setAdmissions(MOCK_IPD_ADMISSIONS);
-                setLoading(false);
-            }, 500);
         };
         fetchAdmissions();
     }, []);

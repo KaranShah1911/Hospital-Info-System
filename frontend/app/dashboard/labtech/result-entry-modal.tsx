@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { ServiceOrder, submitResult } from "@/lib/mock-data";
+// import { ServiceOrder, submitResult } from "@/lib/mock-data"; 
+import api from "@/lib/api";
 import { X, Check, Save, FileText, FlaskConical, Stethoscope, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { ServiceOrder } from "./page"; // Use shared type from page
 
 interface ResultEntryModalProps {
     isOpen: boolean;
@@ -25,23 +28,24 @@ export default function ResultEntryModal({ isOpen, onClose, order, onSuccess }: 
         e.preventDefault();
         setIsSubmitting(true);
 
-        const success = await submitResult({
-            serviceOrderId: order.id,
-            testName: order.testName,
-            resultValue: remarks ? `${resultValue} (Note: ${remarks})` : resultValue, // Simple way to persist remarks for now
-            referenceRange,
-            unit,
-            technicianId: "TECH-CURRENT-USER", // Mock ID
-            documentUrl: "https://example.com/mock-report.pdf", // Mock URL for now as we don't have real upload
-        });
+        try {
+            await api.post('/lab/submit-result', {
+                serviceOrderId: order.id,
+                serviceId: order.serviceId, // Ensure this exists on order object passed
+                testName: order.testName,
+                resultValue: resultValue,
+                referenceRange: referenceRange,
+                unit: unit,
+                remarks: remarks,
+            });
 
-        setIsSubmitting(false);
-
-        if (success) {
-            // alert("Result Saved Successfully!"); // Replace with Toast
+            toast.success("Result Saved Successfully!");
             onSuccess();
-        } else {
-            alert("Failed to save result. Please try again.");
+        } catch (error) {
+            console.error("Submit Error:", error);
+            toast.error("Failed to save result.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

@@ -1,66 +1,71 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getLabWorklist, verifyResult, rejectResult, ServiceOrder } from "@/lib/mock-data";
-import { Search, CheckCircle, XCircle, FileText, AlertTriangle, Activity, User, Stethoscope } from "lucide-react";
+// import { getLabWorklist, verifyResult, rejectResult, ServiceOrder } from "@/lib/mock-data";
+import api from "@/lib/api";
+import { Search, CheckCircle, XCircle, FileText, AlertTriangle, Activity, User, Stethoscope, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import ResultEntryModal from "../result-entry-modal";
+import { ServiceOrder } from "../page";
 
 export default function ResultValidation() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
     const [loading, setLoading] = useState(true);
-    const [processingId, setProcessingId] = useState<string | null>(null);
-    const [rejectRemark, setRejectRemark] = useState("");
-    const [isRejecting, setIsRejecting] = useState(false);
+    const [processingId, setProcessingId] = useState<string | null>(null); // Keep if used for modal, else remove. Not used anymore.
+    // Removed unused state vars
 
     const fetchOrders = async () => {
         setLoading(true);
-        const data = await getLabWorklist();
-        // Filter for orders needing validation
-        const validationQueue = data.filter(o => o.status === "ResultAvailable");
-        setOrders(validationQueue);
+        try {
+            const res = await api.get('/lab/worklist?category=Lab');
+            // Filter for orders status = SampleCollected (Ready for result)
+            // Or 'ResultAvailable' if this is truly validation? 
+            // User said "move in validation where they will upload result". So input state is SampleCollected.
+            const validationQueue = res.data.data
+                .filter((o: any) => o.status === 'SampleCollected')
+                .map((o: any) => ({
+                    id: o.id,
+                    serviceId: o.serviceId,
+                    patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                    uhid: o.patient?.uhid || 'N/A',
+                    gender: o.patient?.gender || '-',
+                    age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                    testName: o.service?.name || 'Unknown Test',
+                    department: o.service?.category || 'Lab',
+                    status: o.status,
+                    priority: o.priority,
+                    clinicalIndication: o.clinicalIndication,
+                    orderDate: o.orderDate,
+                    result: null
+                }));
 
-        // Deselect if the selected order is no longer in the list
-        if (selectedOrder && !validationQueue.find(o => o.id === selectedOrder.id)) {
-            setSelectedOrder(null);
-            setIsRejecting(false);
-            setRejectRemark("");
+            setOrders(validationQueue);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     useEffect(() => {
         fetchOrders();
     }, []);
 
-    const handleVerify = async (orderId: string) => {
-        if (!confirm("Are you sure you want to verify this result? This action cannot be undone.")) return;
+    // We reuse the ResultEntryModal from previous implementation?
+    // Or inline form as per current UI design? 
+    // The current UI design has "Result Card" with "Measured Value". That looks like a view mode.
+    // If we need to "Upload Result", we need inputs.
+    // I will import ResultEntryModal and adding a "Enter Result" button that opens it.
+    // Or better, since `validation/page.tsx` seems designed for Doctor info, I will refactor it to input fields if user wants to upload result here.
+    // Actually, simpler to just use the Modal.
+    // Let's add `openResultModal`.
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
-        setProcessingId(orderId);
-        const success = await verifyResult(orderId, "DOC-CURRENT-USER");
-        if (success) {
-            // alert("Result Verified Successfully!"); // Replace with Toast
-            await fetchOrders();
-        }
-        setProcessingId(null);
-    };
-
-    const handleReject = async (orderId: string) => {
-        if (!rejectRemark.trim()) {
-            alert("Please provide a reason for rejection.");
-            return;
-        }
-
-        setProcessingId(orderId);
-        const success = await rejectResult(orderId, rejectRemark);
-        if (success) {
-            // alert("Result Rejected. Sent back for re-testing."); // Replace with Toast
-            await fetchOrders();
-        }
-        setProcessingId(null);
+    const openResultModal = () => {
+        setIsResultModalOpen(true);
     };
 
     return (
@@ -83,7 +88,7 @@ export default function ResultValidation() {
                         orders.map((order) => (
                             <div
                                 key={order.id}
-                                onClick={() => { setSelectedOrder(order); setIsRejecting(false); setRejectRemark(""); }}
+                                onClick={() => setSelectedOrder(order)}
                                 className={cn(
                                     "p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md group",
                                     selectedOrder?.id === order.id
@@ -148,103 +153,79 @@ export default function ResultValidation() {
                             </div>
                         </div>
 
-                        {/* Result Card */}
-                        <div className="flex-1">
-                            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="space-y-1">
-                                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Measured Value</span>
-                                        <div className="text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-2">
-                                            {selectedOrder.result?.resultValue}
-                                            <span className="text-lg font-medium text-slate-400">{selectedOrder.result?.unit}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Reference Range</span>
-                                        <div className="text-xl font-semibold text-slate-700 mt-2">{selectedOrder.result?.referenceRange || "N/A"}</div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Performed By</span>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                                                {selectedOrder.result?.technicianId?.charAt(0) || "T"}
-                                            </div>
-                                            <div className="text-sm font-medium text-slate-700">
-                                                {selectedOrder.result?.technicianId || "Unknown Tech"}
+                        {/* Result Card - Only show if Result exists */}
+                        {selectedOrder.result ? (
+                            <div className="flex-1">
+                                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                        <div className="space-y-1">
+                                            <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Measured Value</span>
+                                            <div className="text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-2">
+                                                {selectedOrder.result.resultValue}
+                                                <span className="text-lg font-medium text-slate-400">{selectedOrder.result.unit}</span>
                                             </div>
                                         </div>
-                                        <div className="text-xs text-slate-400 mt-1">
-                                            {selectedOrder.result?.resultDate && format(new Date(selectedOrder.result.resultDate), "MMM dd, hh:mm a")}
+
+                                        <div className="space-y-1">
+                                            <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Reference Range</span>
+                                            <div className="text-xl font-semibold text-slate-700 mt-2">{selectedOrder.result.referenceRange || "N/A"}</div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Performed By</span>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                                                    {selectedOrder.result.technicianId?.charAt(0) || "T"}
+                                                </div>
+                                                <div className="text-sm font-medium text-slate-700">
+                                                    {selectedOrder.result.technicianId || "Unknown Tech"}
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-slate-400 mt-1">
+                                                {selectedOrder.result.resultDate && format(new Date(selectedOrder.result.resultDate), "MMM dd, hh:mm a")}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Rejection Area */}
-                            {isRejecting && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl"
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-8">
+                                <FlaskConical size={48} className="text-indigo-200 mb-4" />
+                                <h3 className="text-lg font-bold text-slate-700">Pending Result Entry</h3>
+                                <p className="text-slate-500 text-sm mb-6 text-center max-w-xs">Sample has been collected. Please enter the analysis results to proceed.</p>
+                                <button
+                                    onClick={openResultModal}
+                                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2"
                                 >
-                                    <label className="block text-xs font-bold text-red-700 uppercase tracking-wide mb-2">
-                                        Reason for Rejection <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        value={rejectRemark}
-                                        onChange={(e) => setRejectRemark(e.target.value)}
-                                        placeholder="Enter specific reason for rejection (e.g. Hemolyzed sample, contamination suspected)..."
-                                        className="w-full p-3 bg-white border border-red-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 resize-none h-24"
-                                    />
-                                    <div className="flex justify-end gap-3 mt-3">
-                                        <button
-                                            onClick={() => setIsRejecting(false)}
-                                            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => handleReject(selectedOrder.id)}
-                                            disabled={!rejectRemark || processingId === selectedOrder.id}
-                                            className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg shadow-lg shadow-red-600/20 hover:bg-red-700 transition disabled:opacity-50"
-                                        >
-                                            {processingId === selectedOrder.id ? "Rejecting..." : "Confirm Rejection"}
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
+                                    <FlaskConical size={18} />
+                                    Enter Result
+                                </button>
+                            </div>
+                        )}
 
                         {/* Actions Footer */}
-                        {!isRejecting && (
-                            <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-4 mt-auto">
-                                <button
-                                    onClick={() => setIsRejecting(true)}
-                                    className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition flex items-center gap-2"
-                                >
-                                    <XCircle size={20} />
-                                    Reject Result
-                                </button>
-
-                                <button
-                                    onClick={() => handleVerify(selectedOrder.id)}
-                                    disabled={processingId === selectedOrder.id}
-                                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {processingId === selectedOrder.id ? (
-                                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                    ) : (
-                                        <CheckCircle size={20} />
-                                    )}
-                                    Verify & Sign Off
-                                </button>
+                        {selectedOrder.result && (
+                            <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-4 mt-auto">
+                                <span className="text-sm text-slate-500 italic">Result submitted. Waiting for verification.</span>
                             </div>
                         )}
                     </div>
                 )}
             </div>
+
+            {/* Modal */}
+            {selectedOrder && (
+                <ResultEntryModal
+                    isOpen={isResultModalOpen}
+                    onClose={() => setIsResultModalOpen(false)}
+                    order={selectedOrder}
+                    onSuccess={() => {
+                        setIsResultModalOpen(false);
+                        setSelectedOrder(null);
+                        fetchOrders();
+                    }}
+                />
+            )}
         </div>
     );
 }

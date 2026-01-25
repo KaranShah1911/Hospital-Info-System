@@ -1,32 +1,72 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getRadiologyWorklist, ServiceOrder } from "@/lib/mock-data";
-import { Search, Clock, CheckCircle, Truck, FileText, AlertCircle, Syringe, Radiation, Scan, Activity } from "lucide-react";
+import api from "@/lib/api";
+import { Search, Clock, CheckCircle, Truck, FileText, AlertCircle, Radiation, Scan, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { ServiceOrder } from "../page";
+import { toast } from "sonner";
 
-export default function RadiologyTracking() {
+export default function ExamTracking() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchOrders = async () => {
-            setLoading(true);
-            const data = await getRadiologyWorklist();
-            setOrders(data);
+    const fetchOrders = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/lab/worklist?category=Radiology');
+            const mappedOrders = res.data.data.map((o: any) => ({
+                id: o.id,
+                serviceId: o.serviceId,
+                patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                uhid: o.patient?.uhid || 'N/A',
+                gender: o.patient?.gender || '-',
+                age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                testName: o.service?.name || 'Unknown Test',
+                department: o.service?.category || 'Radiology',
+                status: o.status,
+                priority: o.priority,
+                clinicalIndication: o.clinicalIndication,
+                orderDate: o.orderDate,
+                result: o.labResults?.[0] ? { resultValue: o.labResults[0].resultValue } : null,
+                trackingEvents: o.trackingEvents || []
+            }));
+            setOrders(mappedOrders);
+        } catch (error) {
+            console.error(error);
+        } finally {
             setLoading(false);
-        };
+        }
+    };
+
+    useEffect(() => {
         fetchOrders();
     }, []);
 
+    const handleCompleteExam = async (orderId: string) => {
+        try {
+            await api.patch(`/lab/update-status/${orderId}`, { status: 'SampleCollected' });
+            toast.success("Exam Marked Completed");
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'SampleCollected' } : o));
+            if (selectedOrder?.id === orderId) {
+                setSelectedOrder(prev => prev ? { ...prev, status: 'SampleCollected' } : null);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to update status");
+        }
+    };
+
     const filteredOrders = orders.filter(
         (order) =>
-            order.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.uhid.toLowerCase().includes(searchQuery.toLowerCase())
+            (order.status === 'Ordered') &&
+            (order.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.uhid.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const getStatusIcon = (status: string) => {
@@ -139,53 +179,76 @@ export default function RadiologyTracking() {
                         </div>
 
                         <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
-                            {selectedOrder.trackingEvents.map((event, index) => (
-                                <div key={index} className="relative">
-                                    <div className={cn(
-                                        "absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10",
-                                        index === selectedOrder.trackingEvents.length - 1
-                                            ? "border-indigo-600 text-indigo-600 shadow-lg shadow-indigo-600/20 ring-4 ring-indigo-50"
-                                            : "border-slate-300 text-slate-400"
-                                    )}>
-                                        {getStatusIcon(event.status)}
+                            {/* Action Area */}
+                            {selectedOrder.status === 'Ordered' && (
+                                <div className="mb-8 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-blue-900">Exam Pending</h3>
+                                        <p className="text-sm text-blue-700">Patient has arrived. Complete the exam to proceed to reporting.</p>
                                     </div>
-
-                                    <div className={cn(
-                                        "p-5 rounded-xl border transition-all",
-                                        index === selectedOrder.trackingEvents.length - 1
-                                            ? "bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500/10"
-                                            : "bg-slate-50 border-slate-200"
-                                    )}>
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                            <h4 className={cn(
-                                                "font-bold text-base",
-                                                index === selectedOrder.trackingEvents.length - 1 ? "text-indigo-700" : "text-slate-700"
-                                            )}>
-                                                {formatStatus(event.status)}
-                                            </h4>
-                                            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-100">
-                                                <Clock size={12} />
-                                                {format(new Date(event.timestamp), "MMM dd, yyyy • hh:mm a")}
-                                            </span>
-                                        </div>
-
-                                        <div className="text-sm text-slate-600 flex items-center gap-2 mb-1">
-                                            <span className="text-slate-400">Performed by:</span>
-                                            <span className="font-semibold bg-slate-200/50 px-2 py-0.5 rounded text-xs">{event.performedBy}</span>
-                                        </div>
-
-                                        {event.remarks && (
-                                            <div className="mt-3 text-sm bg-red-50 text-red-700 p-3 rounded-lg border border-red-100 flex gap-2 items-start">
-                                                <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                                                <div>
-                                                    <span className="font-bold block text-xs uppercase tracking-wide mb-0.5">Remarks</span>
-                                                    {event.remarks}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <button
+                                        onClick={() => handleCompleteExam(selectedOrder.id)}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md transition flex items-center gap-2"
+                                    >
+                                        <Radiation size={16} />
+                                        Complete Exam
+                                    </button>
                                 </div>
-                            ))}
+                            )}
+
+                            {/* Timeline */}
+                            {(selectedOrder.trackingEvents && selectedOrder.trackingEvents.length > 0) ? (
+                                selectedOrder.trackingEvents.map((event: any, index: number) => (
+                                    <div key={index} className="relative">
+                                        <div className={cn(
+                                            "absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10",
+                                            // Simple heuristic for current step visualization
+                                            (index === 0 && selectedOrder.status === 'Ordered') || (event.status === selectedOrder.status)
+                                                ? "border-indigo-600 text-indigo-600 shadow-lg shadow-indigo-600/20 ring-4 ring-indigo-50"
+                                                : "border-slate-300 text-slate-400"
+                                        )}>
+                                            {getStatusIcon(event.status || 'Ordered')}
+                                        </div>
+
+                                        <div className={cn(
+                                            "p-5 rounded-xl border transition-all",
+                                            event.status === selectedOrder.status
+                                                ? "bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500/10"
+                                                : "bg-slate-50 border-slate-200"
+                                        )}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                                <h4 className={cn(
+                                                    "font-bold text-base",
+                                                    event.status === selectedOrder.status ? "text-indigo-700" : "text-slate-700"
+                                                )}>
+                                                    {event.status ? formatStatus(event.status) : 'Status Unknown'}
+                                                </h4>
+                                                <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-100">
+                                                    <Clock size={12} />
+                                                    {event.timestamp && format(new Date(event.timestamp), "MMM dd, yyyy • hh:mm a")}
+                                                </span>
+                                            </div>
+
+                                            <div className="text-sm text-slate-600 flex items-center gap-2 mb-1">
+                                                <span className="text-slate-400">Performed by:</span>
+                                                <span className="font-semibold bg-slate-200/50 px-2 py-0.5 rounded text-xs">{event.performedBy || 'System'}</span>
+                                            </div>
+
+                                            {event.remarks && (
+                                                <div className="mt-3 text-sm bg-red-50 text-red-700 p-3 rounded-lg border border-red-100 flex gap-2 items-start">
+                                                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                                    <div>
+                                                        <span className="font-bold block text-xs uppercase tracking-wide mb-0.5">Remarks</span>
+                                                        {event.remarks}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-slate-400 text-sm italic">No tracking history available.</div>
+                            )}
                         </div>
                     </div>
                 )}

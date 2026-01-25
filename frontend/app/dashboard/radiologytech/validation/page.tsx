@@ -1,66 +1,60 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getRadiologyWorklist, verifyResult, rejectResult, ServiceOrder } from "@/lib/mock-data";
-import { Search, CheckCircle, XCircle, FileText, Activity, User, Stethoscope, Scan } from "lucide-react";
+import api from "@/lib/api";
+import { Search, CheckCircle, XCircle, FileText, Activity, User, Stethoscope, FlaskConical, Scan } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import ResultEntryModal from "../result-entry-modal";
+import { ServiceOrder } from "../page";
+import { toast } from "sonner";
 
-export default function RadiologyResultValidation() {
+export default function ReportValidation() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
     const [loading, setLoading] = useState(true);
-    const [processingId, setProcessingId] = useState<string | null>(null);
-    const [rejectRemark, setRejectRemark] = useState("");
-    const [isRejecting, setIsRejecting] = useState(false);
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
     const fetchOrders = async () => {
         setLoading(true);
-        const data = await getRadiologyWorklist();
-        // Filter for orders needing validation
-        const validationQueue = data.filter(o => o.status === "ResultAvailable");
-        setOrders(validationQueue);
+        try {
+            const res = await api.get('/lab/worklist?category=Radiology');
+            // Filter for orders status = SampleCollected (Waiting for Report)
+            // Depending on backend, SampleCollected might be the status after "Complete Exam".
+            const validationQueue = res.data.data
+                .filter((o: any) => o.status === 'SampleCollected')
+                .map((o: any) => ({
+                    id: o.id,
+                    serviceId: o.serviceId,
+                    patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                    uhid: o.patient?.uhid || 'N/A',
+                    gender: o.patient?.gender || '-',
+                    age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                    testName: o.service?.name || 'Unknown Test',
+                    department: o.service?.category || 'Radiology',
+                    status: o.status,
+                    priority: o.priority,
+                    clinicalIndication: o.clinicalIndication,
+                    orderDate: o.orderDate,
+                    result: null
+                }));
 
-        // Deselect if the selected order is no longer in the list
-        if (selectedOrder && !validationQueue.find(o => o.id === selectedOrder.id)) {
-            setSelectedOrder(null);
-            setIsRejecting(false);
-            setRejectRemark("");
+            setOrders(validationQueue);
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to fetch pending reports");
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     useEffect(() => {
         fetchOrders();
     }, []);
 
-    const handleVerify = async (orderId: string) => {
-        if (!confirm("Are you sure you want to verify and finalize this report?")) return;
-
-        setProcessingId(orderId);
-        const success = await verifyResult(orderId, "RAD-DOC-CURRENT-USER");
-        if (success) {
-            // alert("Report Finalized Successfully!"); 
-            await fetchOrders();
-        }
-        setProcessingId(null);
-    };
-
-    const handleReject = async (orderId: string) => {
-        if (!rejectRemark.trim()) {
-            alert("Please provide a reason for rejection.");
-            return;
-        }
-
-        setProcessingId(orderId);
-        const success = await rejectResult(orderId, rejectRemark);
-        if (success) {
-            // alert("Report Rejected. Sent back for revision.");
-            await fetchOrders();
-        }
-        setProcessingId(null);
+    const openResultModal = () => {
+        setIsResultModalOpen(true);
     };
 
     return (
@@ -68,7 +62,7 @@ export default function RadiologyResultValidation() {
             {/* Queue List */}
             <div className="w-full max-w-sm flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-slate-800">Review Queue</h2>
+                    <h2 className="text-lg font-bold text-slate-800">Pending Reports</h2>
                     <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
                         {orders.length} Pending
                     </span>
@@ -78,12 +72,12 @@ export default function RadiologyResultValidation() {
                     {loading ? (
                         <div className="text-center py-10 text-slate-400 text-sm">Loading queue...</div>
                     ) : orders.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400 text-sm">No reports pending review.</div>
+                        <div className="text-center py-10 text-slate-400 text-sm">No reports pending.</div>
                     ) : (
                         orders.map((order) => (
                             <div
                                 key={order.id}
-                                onClick={() => { setSelectedOrder(order); setIsRejecting(false); setRejectRemark(""); }}
+                                onClick={() => setSelectedOrder(order)}
                                 className={cn(
                                     "p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md group",
                                     selectedOrder?.id === order.id
@@ -103,7 +97,7 @@ export default function RadiologyResultValidation() {
                                 <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
                                     <span>{order.patientName}</span>
                                     <span className="flex items-center gap-1 group-hover:text-indigo-600 transition-colors">
-                                        Review <CheckCircle size={10} />
+                                        Write Report <Scan size={14} />
                                     </span>
                                 </div>
                             </div>
@@ -117,9 +111,9 @@ export default function RadiologyResultValidation() {
                 {!selectedOrder ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                            <Scan size={32} className="opacity-50" />
+                            <Activity size={32} className="opacity-50" />
                         </div>
-                        <p className="font-medium">Select a report to review</p>
+                        <p className="font-medium">Select an exam to write report</p>
                     </div>
                 ) : (
                     <div className="h-full flex flex-col max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -143,100 +137,63 @@ export default function RadiologyResultValidation() {
                                 )}
                             </div>
                             <div className="text-right">
-                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Order ID</span>
+                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Sample ID</span>
                                 <span className="font-mono text-lg font-bold text-slate-700">{selectedOrder.id}</span>
                             </div>
                         </div>
 
-                        {/* Report Preview */}
-                        <div className="flex-1 min-h-0 flex flex-col">
-                            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 flex-1 overflow-y-auto custom-scrollbar">
-                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-4 pb-2 border-b border-slate-200">
-                                    Report Findings
-                                </span>
-                                <div className="prose prose-slate max-w-none">
-                                    <div className="whitespace-pre-wrap font-serif text-lg leading-relaxed text-slate-800">
-                                        {selectedOrder.result?.resultValue || "No report content found."}
+                        {/* Result/Report Card */}
+                        {selectedOrder.result ? (
+                            <div className="flex-1">
+                                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-4">Report Findings</h3>
+                                    <div className="bg-white p-6 rounded-xl border border-slate-200 text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                        {selectedOrder.result.resultValue}
                                     </div>
-                                </div>
-
-                                <div className="mt-8 pt-4 border-t border-slate-200 grid grid-cols-2 gap-4">
-                                    <div>
-                                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Reported By</span>
-                                        <div className="text-sm font-semibold text-slate-700">{selectedOrder.result?.technicianId || "Unknown"}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Date</span>
-                                        <div className="text-sm font-semibold text-slate-700">
-                                            {selectedOrder.result?.resultDate && format(new Date(selectedOrder.result.resultDate), "PPP")}
-                                        </div>
+                                    <div className="mt-4 flex gap-4 text-xs text-slate-400">
+                                        <span>Radiologist: {selectedOrder.result.technicianId || "Pending"}</span>
+                                        <span>Date: {selectedOrder.result.resultDate && format(new Date(selectedOrder.result.resultDate), "MMM dd, yyyy")}</span>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Rejection Area */}
-                            {isRejecting && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl shrink-0"
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-8">
+                                <FileText size={48} className="text-indigo-200 mb-4" />
+                                <h3 className="text-lg font-bold text-slate-700">Pending Radiology Report</h3>
+                                <p className="text-slate-500 text-sm mb-6 text-center max-w-xs">Exam images have been captured. Please write and submit the radiology report.</p>
+                                <button
+                                    onClick={openResultModal}
+                                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition flex items-center gap-2"
                                 >
-                                    <label className="block text-xs font-bold text-red-700 uppercase tracking-wide mb-2">
-                                        Reason for Rejection <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        value={rejectRemark}
-                                        onChange={(e) => setRejectRemark(e.target.value)}
-                                        placeholder="Enter specific feedback for the radiologist..."
-                                        className="w-full p-3 bg-white border border-red-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 resize-none h-24"
-                                    />
-                                    <div className="flex justify-end gap-3 mt-3">
-                                        <button
-                                            onClick={() => setIsRejecting(false)}
-                                            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => handleReject(selectedOrder.id)}
-                                            disabled={!rejectRemark || processingId === selectedOrder.id}
-                                            className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg shadow-lg shadow-red-600/20 hover:bg-red-700 transition disabled:opacity-50"
-                                        >
-                                            {processingId === selectedOrder.id ? "Processing..." : "Confirm Rejection"}
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
+                                    <Scan size={18} />
+                                    Write Report
+                                </button>
+                            </div>
+                        )}
 
                         {/* Actions Footer */}
-                        {!isRejecting && (
-                            <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-4 mt-6 shrink-0">
-                                <button
-                                    onClick={() => setIsRejecting(true)}
-                                    className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition flex items-center gap-2"
-                                >
-                                    <XCircle size={20} />
-                                    Reject Report
-                                </button>
-
-                                <button
-                                    onClick={() => handleVerify(selectedOrder.id)}
-                                    disabled={processingId === selectedOrder.id}
-                                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {processingId === selectedOrder.id ? (
-                                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                    ) : (
-                                        <CheckCircle size={20} />
-                                    )}
-                                    Sign Off & Finalize
-                                </button>
+                        {selectedOrder.result && (
+                            <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-4 mt-auto">
+                                <span className="text-sm text-slate-500 italic">Report submitted.</span>
                             </div>
                         )}
                     </div>
                 )}
             </div>
+
+            {/* Modal */}
+            {selectedOrder && (
+                <ResultEntryModal
+                    isOpen={isResultModalOpen}
+                    onClose={() => setIsResultModalOpen(false)}
+                    order={selectedOrder}
+                    onSuccess={() => {
+                        setIsResultModalOpen(false);
+                        setSelectedOrder(null);
+                        fetchOrders();
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getLabWorklist, ServiceOrder } from "@/lib/mock-data";
+// import { getLabWorklist, ServiceOrder } from "@/lib/mock-data"; 
+import api from "@/lib/api";
 import { Search, Clock, CheckCircle, Truck, FileText, AlertCircle, Syringe, FlaskConical, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { ServiceOrder } from "../page";
 
 export default function SampleTracking() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
@@ -13,21 +16,63 @@ export default function SampleTracking() {
     const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchOrders = async () => {
-            setLoading(true);
-            const data = await getLabWorklist();
-            setOrders(data);
+    const fetchOrders = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/lab/worklist?category=Lab');
+            // Map API response to ServiceOrder type
+            const mappedOrders = res.data.data.map((o: any) => ({
+                id: o.id,
+                serviceId: o.serviceId,
+                patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                uhid: o.patient?.uhid || 'N/A',
+                gender: o.patient?.gender || '-',
+                age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                testName: o.service?.name || 'Unknown Test',
+                department: o.service?.category || 'Lab',
+                status: o.status,
+                priority: o.priority,
+                clinicalIndication: o.clinicalIndication,
+                orderDate: o.orderDate,
+                result: o.labResults?.[0] ? { resultValue: o.labResults[0].resultValue } : null,
+                trackingEvents: o.trackingEvents || [] // If backend supports tracking events, else likely empty or need to mock for UI 
+            }));
+            setOrders(mappedOrders);
+        } catch (error) {
+            console.error("Failed to fetch orders", error);
+        } finally {
             setLoading(false);
-        };
+        }
+    };
+
+    useEffect(() => {
         fetchOrders();
     }, []);
 
+    const handleCollectSample = async (orderId: string) => {
+        try {
+            await api.patch(`/lab/update-status/${orderId}`, { status: 'SampleCollected' });
+            toast.success("Sample Marked Collected");
+            // Update local state: Move to SampleCollected or remove if we only want 'Ordered' here?
+            // User said: "you will click sample collected and that thing will move in validation"
+            // This implies it disappears from here or status changes. Current page shows list.
+            // Let's update status locally.
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'SampleCollected' } : o));
+
+            // If we only show 'Ordered', we should filter it out?
+            // The UI below `filteredOrders` logic maps everything.
+            // But usually 'Tracking' shows history too. Let's keep it but maybe visually indicate.
+        } catch (error) {
+            toast.error("Failed to update status");
+        }
+    };
+
     const filteredOrders = orders.filter(
         (order) =>
-            order.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.uhid.toLowerCase().includes(searchQuery.toLowerCase())
+            (order.status === 'Ordered') && // User implied this page is for collecting samples
+            (order.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.uhid.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const getStatusIcon = (status: string) => {
@@ -134,53 +179,76 @@ export default function SampleTracking() {
                         </div>
 
                         <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
-                            {selectedOrder.trackingEvents.map((event, index) => (
-                                <div key={index} className="relative">
-                                    <div className={cn(
-                                        "absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10",
-                                        index === selectedOrder.trackingEvents.length - 1
-                                            ? "border-indigo-600 text-indigo-600 shadow-lg shadow-indigo-600/20 ring-4 ring-indigo-50"
-                                            : "border-slate-300 text-slate-400"
-                                    )}>
-                                        {getStatusIcon(event.status)}
+                            {/* Action Area */}
+                            {selectedOrder.status === 'Ordered' && (
+                                <div className="mb-8 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-blue-900">Sample Collection Pending</h3>
+                                        <p className="text-sm text-blue-700">Confirm sample collection to proceed to validation.</p>
                                     </div>
-
-                                    <div className={cn(
-                                        "p-5 rounded-xl border transition-all",
-                                        index === selectedOrder.trackingEvents.length - 1
-                                            ? "bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500/10"
-                                            : "bg-slate-50 border-slate-200"
-                                    )}>
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                            <h4 className={cn(
-                                                "font-bold text-base",
-                                                index === selectedOrder.trackingEvents.length - 1 ? "text-indigo-700" : "text-slate-700"
-                                            )}>
-                                                {event.status.replace(/([A-Z])/g, ' $1').trim()}
-                                            </h4>
-                                            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-100">
-                                                <Clock size={12} />
-                                                {format(new Date(event.timestamp), "MMM dd, yyyy • hh:mm a")}
-                                            </span>
-                                        </div>
-
-                                        <div className="text-sm text-slate-600 flex items-center gap-2 mb-1">
-                                            <span className="text-slate-400">Performed by:</span>
-                                            <span className="font-semibold bg-slate-200/50 px-2 py-0.5 rounded text-xs">{event.performedBy}</span>
-                                        </div>
-
-                                        {event.remarks && (
-                                            <div className="mt-3 text-sm bg-red-50 text-red-700 p-3 rounded-lg border border-red-100 flex gap-2 items-start">
-                                                <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                                                <div>
-                                                    <span className="font-bold block text-xs uppercase tracking-wide mb-0.5">Remarks</span>
-                                                    {event.remarks}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <button
+                                        onClick={() => handleCollectSample(selectedOrder.id)}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md transition flex items-center gap-2"
+                                    >
+                                        <Syringe size={16} />
+                                        Collect Sample
+                                    </button>
                                 </div>
-                            ))}
+                            )}
+
+                            {/* Timeline */}
+                            {(selectedOrder.trackingEvents && selectedOrder.trackingEvents.length > 0) ? (
+                                selectedOrder.trackingEvents.map((event: any, index: number) => (
+                                    <div key={index} className="relative">
+                                        <div className={cn(
+                                            "absolute -left-[29px] w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10",
+                                            // Simple heuristic for current step visualization
+                                            (index === 0 && selectedOrder.status === 'Ordered') || (event.status === selectedOrder.status)
+                                                ? "border-indigo-600 text-indigo-600 shadow-lg shadow-indigo-600/20 ring-4 ring-indigo-50"
+                                                : "border-slate-300 text-slate-400"
+                                        )}>
+                                            {getStatusIcon(event.status || 'Ordered')}
+                                        </div>
+
+                                        <div className={cn(
+                                            "p-5 rounded-xl border transition-all",
+                                            event.status === selectedOrder.status
+                                                ? "bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500/10"
+                                                : "bg-slate-50 border-slate-200"
+                                        )}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                                <h4 className={cn(
+                                                    "font-bold text-base",
+                                                    event.status === selectedOrder.status ? "text-indigo-700" : "text-slate-700"
+                                                )}>
+                                                    {event.status ? event.status.replace(/([A-Z])/g, ' $1').trim() : 'Status Unknown'}
+                                                </h4>
+                                                <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-100">
+                                                    <Clock size={12} />
+                                                    {event.timestamp && format(new Date(event.timestamp), "MMM dd, yyyy • hh:mm a")}
+                                                </span>
+                                            </div>
+
+                                            <div className="text-sm text-slate-600 flex items-center gap-2 mb-1">
+                                                <span className="text-slate-400">Performed by:</span>
+                                                <span className="font-semibold bg-slate-200/50 px-2 py-0.5 rounded text-xs">{event.performedBy || 'System'}</span>
+                                            </div>
+
+                                            {event.remarks && (
+                                                <div className="mt-3 text-sm bg-red-50 text-red-700 p-3 rounded-lg border border-red-100 flex gap-2 items-start">
+                                                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                                    <div>
+                                                        <span className="font-bold block text-xs uppercase tracking-wide mb-0.5">Remarks</span>
+                                                        {event.remarks}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-slate-400 text-sm italic">No tracking history available.</div>
+                            )}
                         </div>
                     </div>
                 )}

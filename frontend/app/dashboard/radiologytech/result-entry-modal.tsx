@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { ServiceOrder, submitResult } from "@/lib/mock-data";
-import { X, Check, Save, FileText, FlaskConical, Stethoscope, AlertTriangle, Scan } from "lucide-react";
+import { X, Check, Save, FileText, Radiation, AlertTriangle, Scan } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ServiceOrder } from "./page";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 interface ResultEntryModalProps {
     isOpen: boolean;
@@ -35,25 +37,26 @@ export default function ResultEntryModal({ isOpen, onClose, order, onSuccess }: 
         e.preventDefault();
         setIsSubmitting(true);
 
-        const resultData = {
-            serviceOrderId: order.id,
-            testName: order.testName,
-            resultValue: reportContent, // In Radiology, this is the full report text
-            referenceRange: "N/A", // Not applicable for radiology reports usually
-            unit: "Text",
-            technicianId: technicianId,
-            documentUrl: "https://example.com/mock-rad-report.pdf", // Mock URL
-        };
+        try {
+            await api.post('/lab/submit-result', {
+                serviceOrderId: order.id,
+                serviceId: order.serviceId, // Ensure serviceId is passed
+                testName: order.testName,
+                resultValue: reportContent, // Interpreted as "Report Findings"
+                referenceRange: "N/A", // Not typically used for Radiology but schema requires or allows
+                unit: "Text",
+                technicianId: technicianId, // Include technicianId
+                documentUrl: "https://example.com/mock-rad-report.pdf", // Mock URL
+                remarks: "", // Add remarks if needed, or omit if not required by API
+            });
 
-        const success = await submitResult(resultData);
-
-        setIsSubmitting(false);
-
-        if (success) {
-            // alert("Report Saved Successfully!"); 
+            toast.success("Report Saved Successfully!");
             onSuccess();
-        } else {
-            alert("Failed to save report. Please try again.");
+        } catch (error) {
+            console.error("Submit Error:", error);
+            toast.error("Failed to save report.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

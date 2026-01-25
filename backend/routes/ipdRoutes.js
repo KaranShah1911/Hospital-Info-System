@@ -7,7 +7,10 @@ import {
     updateSurgeryStatus,
     getSurgeryChecklist,
     updateChecklistItem,
-    getAdmissions // Add import
+    getAdmissions,
+    getAdmissionById,
+    addProgressNote,
+    getAdmissionNotes
 } from '../controllers/ipdController.js';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 const router = Router();
@@ -16,6 +19,10 @@ const router = Router();
 
 router.post('/', authenticateToken, authorizeRoles('Doctor', 'Receptionist'), admitPatient);
 router.get('/admissions', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getAdmissions); // Get Active Admissions
+router.get('/admissions/:id', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getAdmissionById); // Get Single Admission
+router.get('/admissions/:id/notes', authenticateToken, authorizeRoles('Doctor', 'Nurse', 'Receptionist'), getAdmissionNotes); // Get Notes
+router.post('/notes', authenticateToken, authorizeRoles('Doctor', 'Nurse'), addProgressNote); // Add Note
+
 router.post('/transfer-bed', authenticateToken, authorizeRoles('Nurse', 'Receptionist'), transferBed);
 // router.post('/surgeries', authenticateToken, authorizeRoles('Doctor', 'Nurse'), recordSurgery); // Often under admissions or separate
 router.post('/discharge', authenticateToken, authorizeRoles('Doctor'), dischargePatient);

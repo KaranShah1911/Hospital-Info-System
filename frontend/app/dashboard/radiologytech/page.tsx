@@ -1,11 +1,37 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getRadiologyWorklist, ServiceOrder, collectSample } from "@/lib/mock-data";
+// import { getRadiologyWorklist, ServiceOrder, collectSample } from "@/lib/mock-data";
+import api from "@/lib/api";
 import { Search, Filter, FlaskConical, TestTube, Syringe, FileText, CheckCircle, Clock, AlertCircle, Eye, Activity, Truck, Radiation, Scan } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ResultEntryModal from "./result-entry-modal";
 import Link from 'next/link';
+import { toast } from "sonner";
+
+export interface ServiceOrder {
+    id: string; // ServiceOrder ID
+    patientName: string;
+    uhid: string;
+    gender: string;
+    age: string | number;
+    testName: string;
+    department: string;
+    status: 'Ordered' | 'SampleCollected' | 'ResultAvailable' | 'Completed';
+    priority: 'Routine' | 'Urgent' | 'Stat';
+    clinicalIndication?: string;
+    serviceId: string;
+    result?: {
+        resultValue: string;
+        documentUrl?: string;
+        unit?: string;
+        referenceRange?: string;
+        technicianId?: string;
+        resultDate?: string;
+    };
+    orderDate: string;
+    trackingEvents?: any[];
+}
 
 export default function RadiologyDashboard() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
@@ -16,9 +42,31 @@ export default function RadiologyDashboard() {
 
     const fetchOrders = async () => {
         setLoading(true);
-        const data = await getRadiologyWorklist();
-        setOrders(data);
-        setLoading(false);
+        try {
+            // Reusing Lab Worklist API with Category Filter
+            const res = await api.get('/lab/worklist?category=Radiology');
+            const mappedOrders = res.data.data.map((o: any) => ({
+                id: o.id,
+                serviceId: o.serviceId,
+                patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                uhid: o.patient?.uhid || 'N/A',
+                gender: o.patient?.gender || '-',
+                age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                testName: o.service?.name || 'Unknown Test',
+                department: o.service?.category || 'Radiology',
+                status: o.status,
+                priority: o.priority,
+                clinicalIndication: o.clinicalIndication,
+                orderDate: o.orderDate,
+                result: o.labResults?.[0] ? { resultValue: o.labResults[0].resultValue, ...o.labResults[0] } : null
+            }));
+            setOrders(mappedOrders);
+        } catch (error) {
+            console.error(error);
+            // toast.error("Failed to load worklist");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -26,12 +74,14 @@ export default function RadiologyDashboard() {
     }, []);
 
     const handleStartExam = async (orderId: string) => {
-        // Re-using collectSample as "Start/Complete Exam" for now as it sets status to SampleCollected
-        // In real app, might have separate status like "ExamStarted", "ExamCompleted"
-        const updated = await collectSample(orderId);
-        if (updated) {
-            // alert("Exam Completed Successfully!"); 
-            fetchOrders();
+        try {
+            await api.patch(`/lab/update-status/${orderId}`, { status: 'SampleCollected' });
+            toast.success("Exam Marked Completed");
+            // Optimistic Update
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'SampleCollected' } : o));
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to update status");
         }
     };
 

@@ -14,7 +14,8 @@ export const registerPatient = async (req, res) => {
             phone, email, preferredLanguage,
             permanentAddress, currentAddress, city, state, pincode,
             idProofType, idProofNumber, abhaId,
-            emergencyContactName, emergencyContactPhone
+            emergencyContactName, emergencyContactPhone, emergencyContactRelation,
+            defaultPayerType, insuranceProvider, policyNumber
         } = req.body;
 
         // 1. Check if Phone Already Exists
@@ -58,7 +59,11 @@ export const registerPatient = async (req, res) => {
                 idProofNumber,
                 abhaId,
                 emergencyContactName,
-                emergencyContactPhone
+                emergencyContactPhone,
+                emergencyContactRelation,
+                defaultPayerType,
+                insuranceProvider,
+                policyNumber
             }
         });
 
@@ -165,15 +170,7 @@ export const searchPatientSuggestions = async (req, res) => {
                 ]
             },
             take: 10,
-            select: {
-                id: true,
-                uhid: true,
-                firstName: true,
-                lastName: true,
-                phone: true,
-                gender: true,
-                dob: true
-            }
+            take: 10
         });
 
         res.json(patients);

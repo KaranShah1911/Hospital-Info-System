@@ -1,4 +1,26 @@
 import prisma from '../config/db.js';
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+
+// Get Orders by Admission ID
+export const getOrdersByAdmission = async (req, res) => {
+    try {
+        const { admissionId } = req.params;
+
+        const orders = await prisma.serviceOrder.findMany({
+            where: { admissionId },
+            include: {
+                service: true,
+                doctor: { select: { fullName: true } }
+            },
+            orderBy: { orderDate: 'desc' }
+        });
+
+        res.status(200).json(new ApiResponse(200, orders, "Orders fetched successfully"));
+    } catch (error) {
+        res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
+    }
+};
 
 export const createBatchOrders = async (req, res) => {
     try {

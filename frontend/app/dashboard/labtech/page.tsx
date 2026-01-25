@@ -1,11 +1,38 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getLabWorklist, ServiceOrder, collectSample } from "@/lib/mock-data";
+// import { getLabWorklist, ServiceOrder, collectSample } from "@/lib/mock-data"; 
+import api from "@/lib/api";
 import { Search, Filter, FlaskConical, TestTube, Syringe, FileText, CheckCircle, Clock, AlertCircle, Eye, Activity, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ResultEntryModal from "./result-entry-modal";
 import Link from 'next/link';
+import { toast } from "sonner";
+
+// Local interface matching the Dashboard UI needs, mapped from Backend
+export interface ServiceOrder {
+    id: string; // ServiceOrder ID
+    patientName: string;
+    uhid: string;
+    gender: string;
+    age: string | number;
+    testName: string;
+    department: string;
+    status: 'Ordered' | 'SampleCollected' | 'ResultAvailable' | 'Completed';
+    priority: 'Routine' | 'Urgent' | 'Stat';
+    clinicalIndication?: string;
+    serviceId: string; // Needed for result submission
+    result?: {
+        resultValue: string;
+        documentUrl?: string;
+        unit?: string;
+        referenceRange?: string;
+        technicianId?: string;
+        resultDate?: string;
+    };
+    orderDate: string;
+    trackingEvents?: any[]; // Allow any for now to avoid strict typing issues with complex backend objects
+}
 
 export default function LabDashboard() {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
@@ -16,9 +43,33 @@ export default function LabDashboard() {
 
     const fetchOrders = async () => {
         setLoading(true);
-        const data = await getLabWorklist();
-        setOrders(data);
-        setLoading(false);
+        try {
+            const res = await api.get('/lab/worklist?category=Lab'); // Get specific category
+            console.log("Lab Orders:", res.data);
+
+            const mappedOrders = res.data.data.map((o: any) => ({
+                id: o.id,
+                serviceId: o.serviceId, // Needed for submission
+                patientName: o.patient ? `${o.patient.firstName} ${o.patient.lastName}` : 'Unknown',
+                uhid: o.patient?.uhid || 'N/A',
+                gender: o.patient?.gender || '-',
+                age: o.patient?.dob ? new Date().getFullYear() - new Date(o.patient.dob).getFullYear() : '-',
+                testName: o.service?.name || 'Unknown Test',
+                department: o.service?.category || 'Lab',
+                status: o.status,
+                priority: o.priority,
+                clinicalIndication: o.clinicalIndication,
+                orderDate: o.orderDate,
+                result: o.labResults?.[0] ? { resultValue: o.labResults[0].resultValue } : null
+            }));
+
+            setOrders(mappedOrders);
+        } catch (error) {
+            console.error("Failed to fetch orders:", error);
+            // toast.error("Failed to load worklist"); // Optional: don't spam if just auth error
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -26,10 +77,15 @@ export default function LabDashboard() {
     }, []);
 
     const handleCollectSample = async (orderId: string) => {
-        const updated = await collectSample(orderId);
-        if (updated) {
-            // alert("Sample Collected Successfully!"); // Replace with Toast
-            fetchOrders();
+        try {
+            await api.patch(`/lab/update-status/${orderId}`, { status: 'SampleCollected' });
+            toast.success("Sample Marked Collected");
+
+            // Optimistic Update
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'SampleCollected' } : o));
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to update status");
         }
     };
 
